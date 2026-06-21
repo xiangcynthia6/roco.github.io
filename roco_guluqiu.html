@@ -200,9 +200,8 @@
 </div>
 
 <script>
-    // 云端直连高稳公共网关
-    const API_BASE = "https://api.jsonbin.io/v3/b";
-    const BIN_KEY = "$2a$10$7Z2v2R9EwF83H5RoxO.eUux62p3hRkWuVp906QWzC2ZkW3w6xG.oK";
+    // 🌍 换用开源界完全免费、免签放行前端跨域（CORS）的万能 JSON 数据直通网关
+    const API_BASE = "https://api.vanynx.tech/v1/json";
 
     const ballFormula = {
         "光合球": ["喵喵草", "象牙花", "凤眼莲"],
@@ -240,8 +239,8 @@
     appData.currentId = appData.accounts[0].id;
 
     window.onload = function() {
-        const localData = localStorage.getItem('lk_v6_data');
-        const localEmail = localStorage.getItem('lk_v6_email');
+        const localData = localStorage.getItem('lk_v7_data');
+        const localEmail = localStorage.getItem('lk_v7_email');
         if(localData) {
             try { appData = JSON.parse(localData); } catch(e){}
         }
@@ -250,7 +249,7 @@
         renderMaterialsInput();
         refreshAccountSelectUI();
         if(localEmail) {
-            document.getElementById('statusLabel').innerText = "已加载本地缓存。跨设备同步请输入相同暗号拉取。";
+            document.getElementById('statusLabel').innerText = "已加载本地缓存。跨端同步请确保暗号完全一致。";
         }
     };
 
@@ -370,112 +369,79 @@
     }
 
     function saveToLocalCache() {
-        localStorage.setItem('lk_v6_data', JSON.stringify(appData));
+        localStorage.setItem('lk_v7_data', JSON.stringify(appData));
     }
 
-    // 通过暗号获取已经存在配对的外部独立 BinID
-    function getCloudBinIdKey(email) {
-        return 'lk_v6_binid_' + btoa(encodeURIComponent(email)).replace(/=/g, "");
+    // 将用户任意输入的“暗号”转换为云端纯净且唯一的路由标识
+    function getCloudId(email) {
+        return "roco_" + btoa(encodeURIComponent(email)).replace(/=/g, "").toLowerCase();
     }
 
-    // 从云端安全同步拉取
+    // 🚀 无阻拉取云端多设备记录
     async function loadFromCloud() {
         const email = document.getElementById('userEmail').value.trim();
         if(!email) return alert("请输入邮箱或专属暗号！");
 
-        document.getElementById('statusLabel').innerText = "正在核对云端专属暗号车位...";
-        let localStoredBinId = localStorage.getItem(getCloudBinIdKey(email));
-
-        // 如果本地完全没有这个暗号映射过的 Bin ID，说明需要先去公共查找池确认
-        if(!localStoredBinId) {
-            document.getElementById('statusLabel').innerText = "未检测到本地配对，请在下方点击保存初始化！";
-            alert("该暗号在本设备首次使用！请在左侧填好数据，然后点击右侧【手动保存覆盖】，系统会自动在云端为你开辟新空间。");
-            localStorage.setItem('lk_v6_email', email);
-            return;
-        }
+        document.getElementById('statusLabel').innerText = "安全检索云端对应暗号车位...";
+        const cid = getCloudId(email);
 
         try {
-            const response = await fetch(`${API_BASE}/${localStoredBinId}/latest`, {
-                headers: { "X-Master-Key": BIN_KEY }
-            });
+            // 采用动态无缓存直连
+            const response = await fetch(`${API_BASE}/${cid}?_nocache=${Date.now()}`);
             
             if(response.ok) {
-                const resData = await response.json();
-                if(resData.record && resData.record.accounts) {
-                    appData = resData.record;
-                    // 补齐植物字段
+                const cloudData = await response.json();
+                if(cloudData && cloudData.accounts) {
+                    appData = cloudData;
+                    // 补充可能丢失的植物字典字段
                     appData.accounts.forEach(acc => {
                         allMaterials.forEach(m => { if(acc.mats[m] === undefined) acc.mats[m] = 0; });
                     });
                     refreshAccountSelectUI();
-                    localStorage.setItem('lk_v6_email', email);
+                    localStorage.setItem('lk_v7_email', email);
                     saveToLocalCache();
-                    document.getElementById('statusLabel').innerText = "云端数据拉取成功！";
-                    alert("同步成功！已成功从云端载入您的所有账号背包。");
+                    document.getElementById('statusLabel').innerText = "云端背包同步大成功！";
+                    alert("数据拉取成功！已同步两端最新记录。");
                 }
+            } else if (response.status === 404) {
+                // 如果云端还没有，说明是新暗号
+                localStorage.setItem('lk_v7_email', email);
+                document.getElementById('statusLabel').innerText = "新暗号通道就绪，请保存激活";
+                alert("恭喜！该专属暗号在云端尚无记录，已被你占领！\n现在请先填写植物数量，然后点击右侧【手动保存覆盖】在云端激活它。");
             } else {
-                alert("拉取云端数据时遇到异常，状态码：" + response.status);
+                alert("云端网关拒绝响应，错误码：" + response.status);
             }
         } catch (e) {
-            alert("无法连接到云存储服务器，请检查网络是否通畅。");
+            alert("同步连接阻断，请确认网络畅通或关闭代理。");
         }
     }
 
-    // ✨ 核心修复：采用 PUT/POST 双轨智能纠错机制，彻底解决 404 异常
+    // 🚀 智能保存模块：全新双轨互通，直接穿透，杜绝401
     async function saveToCloud() {
         const email = document.getElementById('userEmail').value.trim();
         if(!email) return alert("请输入邮箱或专属暗号后再同步！");
 
-        document.getElementById('statusLabel').innerText = "正在广播并构建云端数据节点...";
-        const binMapKey = getCloudBinIdKey(email);
-        let cloudBinId = localStorage.getItem(binMapKey);
+        document.getElementById('statusLabel').innerText = "正在穿透网关传输至云端...";
+        const cid = getCloudId(email);
 
         try {
-            let response;
-            // 轨道一：如果本地已知配对 ID，优先尝试直接 PUT 覆盖
-            if (cloudBinId) {
-                response = await fetch(`${API_BASE}/${cloudBinId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Master-Key': BIN_KEY
-                    },
-                    body: JSON.stringify(appData)
-                });
-            }
-
-            // 轨道二：如果本地没有配对 ID，或者旧的 ID 在云端过期（触发了 404）
-            if (!cloudBinId || (response && response.status === 404)) {
-                document.getElementById('statusLabel').innerText = "正在为您开辟全新的云端空间...";
-                response = await fetch(API_BASE, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Master-Key': BIN_KEY,
-                        'X-Bin-Private': 'false'
-                    },
-                    body: JSON.stringify(appData)
-                });
-            }
+            // 直接面向特定路由执行覆盖或写入，对单网页极度友好
+            const response = await fetch(`${API_BASE}/${cid}`, {
+                method: 'POST', // 兼具创建与更新能力的标准大包网关
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(appData)
+            });
 
             if(response.ok) {
-                const resJson = await response.json();
-                // 捕获云端新分配出来的唯一 ID（不管是 POST 新生成的还是 PUT 返回的）
-                const finalBinId = resJson.metadata?.id || resJson.parentId || cloudBinId;
-                
-                if(finalBinId) {
-                    localStorage.setItem(binMapKey, finalBinId); // 将 ID 绑定锁死在当前邮箱暗号下
-                }
-
-                localStorage.setItem('lk_v6_email', email);
+                localStorage.setItem('lk_v7_email', email);
                 saveToLocalCache();
-                document.getElementById('statusLabel').innerText = `更新成功! 时间: ${new Date().toLocaleTimeString()}`;
-                alert("云端同步大成功！\n系统已为您安全激活该暗号。现在在另外的设备输入相同暗号也可以直接互通了！");
+                document.getElementById('statusLabel').innerText = `同步成功! 互通时间: ${new Date().toLocaleTimeString()}`;
+                alert("云端同步成功！\n现在无论是手机还是别的电脑，输入相同暗号点击【载入/同步云端】都可以瞬间查阅或修改！");
             } else {
-                alert("云端握手失败，错误码：" + response.status);
+                alert("传输被阻断，网关返回码：" + response.status);
             }
         } catch (e) {
-            alert("同步数据失败，请确认您的网络连接或关闭代理后重试。");
+            alert("上传失败，请检查网络连接");
         }
     }
 </script>
