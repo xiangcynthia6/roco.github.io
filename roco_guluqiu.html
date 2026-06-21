@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>洛克王国咕噜球与精灵食物计算器 (极限位流版)</title>
+    <title>洛克王国计算器 (65535大容量高精版)</title>
     <script src="https://cdn.staticfile.org/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { --primary-color: #4a90e2; --bg-color: #f5f7fa; --card-bg: #ffffff; --text-color: #333; }
@@ -32,11 +32,10 @@
         .grid-inputs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
         @media (max-width: 480px) { .grid-inputs { grid-template-columns: 1fr; } }
         .input-group { display: flex; align-items: center; justify-content: space-between; background: #fff; padding: 8px 12px; border-radius: 6px; border: 1px solid #e0e0e0; }
-        .input-group input { width: 80px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-size: 14px; }
+        .input-group input { width: 90px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-size: 14px; }
         
         .input-group.mineral { border: 1px solid #9b59b6; background: #faf5fc; }
         
-        /* 通用卡片样式 */
         .ball-card { display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; margin-bottom: 10px; background: #fff; border-left: 5px solid var(--primary-color); border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
         .ball-card.normal-ball { border-left: 5px solid #e67e22; background: #fdfaf7; }
         .ball-name { font-weight: bold; font-size: 15px; color: #2c3e50; }
@@ -44,7 +43,6 @@
         .ball-card.normal-ball .ball-count { color: #e67e22; }
         .ball-mats { font-size: 12px; color: #7f8c8d; margin-top: 4px; }
         
-        /* 新增：食物卡片高亮与周期标签样式 */
         .ball-card.food-card { border-left: 5px solid #27ae60; background: #f4faf6; }
         .food-badge { display: inline-block; background-color: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 8px; }
         .food-count { font-size: 20px; font-weight: bold; color: #27ae60; }
@@ -56,7 +54,7 @@
 <body>
 
 <div class="container">
-    <h1>洛克王国咕噜球与精灵食物计算器</h1>
+    <h1>洛克王国咕噜球与食物计算器 (大容量高精版)</h1>
 
     <div class="sync-panel">
         <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; width: 100%;">
@@ -77,7 +75,7 @@
     <div class="main-content">
         <div>
             <div class="section-header">
-                <h2 class="section-title">请输入背包原材料数量</h2>
+                <h2 class="section-title">请输入背包原材料数量 (上限 65535)</h2>
                 <button class="btn btn-clear" onclick="clearCurrentMats()">🗑️ 清空当前背包</button>
             </div>
             <div class="grid-inputs" id="matsContainer"></div>
@@ -95,7 +93,7 @@
             <div id="foodResultsContainer"></div>
 
             <div style="margin-top: 20px; text-align: right;">
-                <span id="statusLabel" class="status-msg">时效与比特全闭环引擎就绪</span>
+                <span id="statusLabel" class="status-msg">16位双字节高运载流引擎已就绪</span>
             </div>
         </div>
     </div>
@@ -104,7 +102,7 @@
 <div class="modal" id="qrModal" onclick="closeModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
         <h3 id="qrTitle">📱 手机扫码同步</h3>
-        <p style="font-size: 12px; color: #555; margin-bottom: 5px;">食物逻辑为衍生计算，密文流长未变，极度好扫：</p>
+        <p style="font-size: 12px; color: #555; margin-bottom: 5px;">容量已跃升至 65535，纯净流无乱码干扰，极速识别：</p>
         <div id="qrcode"></div>
         <br>
         <button class="btn btn-danger" onclick="closeModal()">关闭窗口</button>
@@ -112,7 +110,6 @@
 </div>
 
 <script>
-    // 咕噜球配方
     const ballFormula = {
         "光合球": ["喵喵草", "象牙花", "凤眼莲"],
         "网兜球": ["海神花", "蓝掌", "风卷草", "喷气菇"],
@@ -125,7 +122,6 @@
         "变幻球": ["流星兰", "紫雀花", "紫晶菇"]
     };
 
-    // 精灵食物结构化核心配置 [消耗植物, 消耗基数, 食物名, 喂养周期文本]
     const foodFormula = [
         ["象牙花", 20, "象牙花甜酱", "40小时"],
         ["恶魔雪茄", 10, "恶魔雪茄布丁", "20小时"],
@@ -153,7 +149,6 @@
         ["向阳花", 1, "向阳花软糖", "2小时"]
     ];
 
-    // 全物料底层序列（追加新矿物在末尾，保持编解码映射不被历史破坏）
     const allMaterials = [
         "向阳花", "喵喵草", "蓝掌", "睡铃", "天使草", "石耳", "伞伞菌", 
         "蜜黄菌", "喷气菇", "凤眼莲", "幽幽草", "星霜花", "雪菇", "骨片", 
@@ -173,7 +168,7 @@
     appData.accounts[0].mats = createEmptyMats();
     appData.currentId = appData.accounts[0].id;
 
-    /* ==================== 🛠️ URL 安全型高阶位流传输器 ==================== */
+    /* ==================== 🛠️ 全新升级：双字节变长 URL 安全编解码机制 ==================== */
     function safeEncode(rawStr) {
         let base64 = btoa(encodeURIComponent(rawStr));
         return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -185,16 +180,18 @@
         return decodeURIComponent(atob(base64));
     }
 
+    // 核心改进：pack 阶段每项原材料使用 4 位十六进制进行对齐编码，支持最大 65535
     function packAccountObj(accObj) {
         let hexStream = "";
         allMaterials.forEach(matName => {
             let val = parseInt(accObj.mats[matName]) || 0;
-            if (val > 255) val = 255; if (val < 0) val = 0;
-            hexStream += val.toString(16).padStart(2, '0');
+            if (val > 65535) val = 65535; if (val < 0) val = 0;
+            hexStream += val.toString(16).padStart(4, '0'); // <-- 关键修改：强行霸占4位，完美对齐
         });
         return `${accObj.id}|${accObj.name}|${hexStream}`;
     }
 
+    // unpack 阶段按每 4 位切块进行无损数值还原
     function unpackAccountStr(accountString) {
         const parts = accountString.split('|');
         if (parts.length >= 3) {
@@ -203,7 +200,7 @@
             const hexStream = parts[2] || "";
             let restoredMats = createEmptyMats();
             for (let i = 0; i < allMaterials.length; i++) {
-                const subHex = hexStream.substr(i * 2, 2);
+                const subHex = hexStream.substr(i * 4, 4); // <-- 关键修改：按4位切片读取
                 if (subHex) restoredMats[allMaterials[i]] = parseInt(subHex, 16) || 0;
             }
             return { id: accId, name: accName, mats: restoredMats };
@@ -230,9 +227,9 @@
                     appData.currentId = incomingAccount.id;
                     saveToLocalCache();
                     window.history.replaceState({}, document.title, window.location.pathname);
-                    alert(`🎉 高密闭同步：账号【${incomingAccount.name}】数据导入成功！`);
+                    alert(`🎉 65535大容量同步成功：账号【${incomingAccount.name}】已完美融入！`);
                 }
-            } catch(e) { alert("同步失败，解析出现异常。"); }
+            } catch(e) { alert("同步失败，可能是旧版不兼容，请使用新版对敲同步。"); }
         }
         renderMaterialsInput();
         refreshAccountSelectUI();
@@ -244,7 +241,8 @@
             const div = document.createElement('div');
             const isMineral = targetMinerals.includes(mat);
             div.className = isMineral ? 'input-group mineral' : 'input-group';
-            div.innerHTML = `<label>${isMineral ? '💎 ' : ''}${mat}</label><input type="number" min="0" max="255" id="mat-${mat}" value="0" oninput="onInputValueChange('${mat}')">`;
+            // 核心改进：去掉了 max="255"，上限变更为大容量的 65535
+            div.innerHTML = `<label>${isMineral ? '💎 ' : ''}${mat}</label><input type="number" min="0" max="65535" id="mat-${mat}" value="0" oninput="onInputValueChange('${mat}')">`;
             container.appendChild(div);
         });
     }
@@ -254,12 +252,11 @@
     function onInputValueChange(matName) {
         const currentAcc = getCurrentAccountObj();
         let val = parseInt(document.getElementById(`mat-${matName}`).value) || 0;
-        if(val > 255) val = 255;
+        if(val > 65535) val = 65535; // 限制至大容量上限
         currentAcc.mats[matName] = val;
         calculateAllOutputs(); saveToLocalCache();
     }
 
-    // 核心统一调配台
     function calculateAllOutputs() {
         const currentAcc = getCurrentAccountObj();
         
@@ -284,16 +281,14 @@
             ballContainer.appendChild(card);
         });
 
-        /* 2. 精灵食物预测计算区 (新增) */
+        /* 2. 精灵食物预测计算区 */
         const foodContainer = document.getElementById('foodResultsContainer'); foodContainer.innerHTML = '';
         foodFormula.forEach(([matName, cost, foodName, cycle]) => {
             const currentStock = parseInt(currentAcc.mats[matName]) || 0;
-            // 向下取整计算出能制造多少个
             const foodCount = Math.floor(currentStock / cost);
             
             const card = document.createElement('div');
             card.className = 'ball-card food-card';
-            
             card.innerHTML = `
                 <div>
                     <div class="ball-name">${foodName}<span class="food-badge">⏱️ 周期: ${cycle}</span></div>
@@ -355,6 +350,7 @@
         document.getElementById("qrTitle").innerText = `📱 同步账号: ${currentAcc.name}`;
         document.getElementById("qrModal").style.display = "flex";
 
+        // 由于16位位流稍微增加了一点体积，我们将容错修正级别设为高敏捷级别 M，格子分布将依然十分清爽，便于快速读取
         new QRCode(document.getElementById("qrcode"), {
             text: baseUrl + "?c=" + compactCode,
             width: 220, height: 220, colorDark : "#000000", colorLight : "#ffffff",
@@ -370,7 +366,7 @@
         const ultraShortText = safeEncode(finalBookStr);
         const temp = document.createElement("textarea"); temp.value = ultraShortText; document.body.appendChild(temp);
         temp.select(); document.execCommand("copy"); document.body.removeChild(temp);
-        alert("📋 【安全纯净短码】已复制！数据包含最新精灵食物与喂养周期衍生模型。");
+        alert("📋 【大容量安全短码】已复制！单物料上限已全解锁（至 65535）。");
     }
 
     function importDataText() {
@@ -383,9 +379,9 @@
             });
             if (importedAccounts.length > 0) {
                 appData.accounts = importedAccounts; appData.currentId = lastId;
-                refreshAccountSelectUI(); saveToLocalCache(); alert(`🎉 解析成功！成功还原 ${importedAccounts.length} 个账号的完整数据模型！`);
+                refreshAccountSelectUI(); saveToLocalCache(); alert(`🎉 大容量版本解析成功！成功还原 ${importedAccounts.length} 个账号的大数值背包数据！`);
             } else { alert("文本解析失败。"); }
-        } catch(e) { alert("解析失败！请确保使用的是同版本导出的密文。"); }
+        } catch(e) { alert("解析失败！如果您跨版本传输了之前的255旧版文本，由于对齐位数改变（从2位变4位），请刷新并在两端统一使用本高精版重新导出。"); }
     }
 </script>
 </body>
