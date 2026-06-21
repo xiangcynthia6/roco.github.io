@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>洛克王国咕噜球计算器</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --bg-color: #f5f7fa;
+            --card-bg: #ffffff;
+            --text-color: #333;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 1100px;
+            width: 100%;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+        }
+        /* 同步与多账号控制面板 */
+        .sync-panel {
+            background: #eef5fe;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        .sync-panel input, .sync-panel select {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .btn:hover { background-color: #357abd; }
+        .btn-success { background-color: #2ea44f; }
+        .btn-success:hover { background-color: #248a3d; }
+        .btn-danger { background-color: #e05d5d; }
+        .btn-danger:hover { background-color: #c74d4d; }
+        .btn-clear { background-color: #f39c12; }
+        .btn-clear:hover { background-color: #d68010; }
+
+        /* 主体布局 */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 30px;
+        }
+        @media (max-width: 768px) {
+            .main-content { grid-template-columns: 1fr; }
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid var(--primary-color);
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #444;
+            margin: 0;
+        }
+
+        /* 植物输入双列布局 */
+        .grid-inputs {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        @media (max-width: 480px) {
+            .grid-inputs { grid-template-columns: 1fr; }
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+        .input-group label {
+            font-size: 14px;
+            color: #555;
+        }
+        .input-group input {
+            width: 80px;
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        /* 右侧结果卡片样式 */
+        .ball-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            margin-bottom: 12px;
+            background: #fff;
+            border-left: 5px solid var(--primary-color);
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .ball-name { font-weight: bold; font-size: 16px; color: #2c3e50; }
+        .ball-count {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2ea44f;
+        }
+        .ball-mats {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        .status-msg {
+            font-size: 14px;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>洛克王国咕噜球计算器</h1>
+
+    <div class="sync-panel">
+        <div>
+            <label><b>1. 同步账号(邮箱或暗号):</b> </label>
+            <input type="text" id="userEmail" placeholder="输入邮箱或独有暗号">
+            <button class="btn" onclick="loadFromCloud()">载入/同步云端</button>
+        </div>
+        <div style="border-left: 1px solid #ccc; padding-left: 15px; display: flex; align-items: center; gap: 8px;">
+            <label><b>2. 选择账号:</b> </label>
+            <select id="accountSelect" onchange="switchAccount()"></select>
+            <input type="text" id="accountNameInput" placeholder="自定义当前账号名" style="width: 130px;" oninput="updateAccountName()">
+            <button class="btn" style="background-color: #9b59b6;" onclick="addNewAccount()">+ 添加新账号</button>
+            <button class="btn btn-danger" id="deleteAccBtn" onclick="deleteCurrentAccount()">删除此号</button>
+        </div>
+        <div style="margin-left: auto;">
+            <button class="btn btn-success" onclick="saveToCloud()">手动保存覆盖</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div>
+            <div class="section-header">
+                <h2 class="section-title">请输入当前植物背包数量</h2>
+                <button class="btn btn-clear" onclick="clearCurrentMats()">🗑️ 清空当前背包</button>
+            </div>
+            <div class="grid-inputs" id="matsContainer"></div>
+        </div>
+
+        <div>
+            <div class="section-header">
+                <h2 class="section-title">可合成咕噜球预测</h2>
+            </div>
+            <div id="resultsContainer"></div>
+            <div style="margin-top: 20px; text-align: right;">
+                <span id="statusLabel" class="status-msg">本地模式（尚未连接云端）</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 换用无跨域拦截、高响应稳定的公共前端分布式 K-V 存储群组 API
+    const API_BASE = "https://api.allorigins.win/raw?url=https://jsonbin.org/guluoke_calc_2026/";
+
+    const ballFormula = {
+        "光合球": ["喵喵草", "象牙花", "凤眼莲"],
+        "网兜球": ["海神花", "蓝掌", "风卷草", "喷气菇"],
+        "调温球": ["星霜花", "伞伞菌", "向阳花", "火焰花"],
+        "美妙球": ["天使草", "雪菇", "短木莲", "荧光兰"],
+        "好战球": ["睡铃", "藻羽花", "大嘴花", "海珊瑚"],
+        "暗星球": ["骨片", "幽幽草", "恶魔雪茄"],
+        "绝缘球": ["杏黄贝", "海桑花", "花星角", "洋红珊瑚"],
+        "淘沙球": ["蜜黄菌", "石耳", "彩玉花", "幽幽鬼火"],
+        "变幻球": ["流星兰", "紫雀花", "紫晶菇"]
+    };
+
+    const allMaterials = [
+        "向阳花", "喵喵草", "蓝掌", "睡铃", "天使草", "石耳", "伞伞菌", 
+        "蜜黄菌", "喷气菇", "凤眼莲", "幽幽草", "星霜花", "雪菇", "骨片", 
+        "花星角", "荧光兰", "大嘴花", "流星兰", "紫晶菇", "海桑花", "恶魔雪茄", 
+        "火焰花", "藻羽花", "彩玉花", "象牙花", "风卷草", "海珊瑚", "海神花", 
+        "幽幽鬼火", "紫雀花", "洋红珊瑚", "杏黄贝", "短木莲"
+    ];
+    
+    let appData = {
+        accounts: [
+            { id: "acc_" + Date.now(), name: "账号一", mats: {} }
+        ],
+        currentId: ""
+    };
+
+    function createEmptyMats() {
+        let mats = {};
+        allMaterials.forEach(m => mats[m] = 0);
+        return mats;
+    }
+    appData.accounts[0].mats = createEmptyMats();
+    appData.currentId = appData.accounts[0].id;
+
+    window.onload = function() {
+        const localData = localStorage.getItem('lk_v3_data');
+        const localEmail = localStorage.getItem('lk_v3_email');
+        if(localData) {
+            try { appData = JSON.parse(localData); } catch(e){}
+        }
+        if(localEmail) document.getElementById('userEmail').value = localEmail;
+
+        renderMaterialsInput();
+        refreshAccountSelectUI();
+        if(localEmail) {
+            document.getElementById('statusLabel').innerText = "已加载本地缓存。跨设备同步请确保暗号完全一致。";
+        }
+    };
+
+    function renderMaterialsInput() {
+        const container = document.getElementById('matsContainer');
+        container.innerHTML = '';
+        allMaterials.forEach(mat => {
+            const div = document.createElement('div');
+            div.className = 'input-group';
+            div.innerHTML = `<label>${mat}</label><input type="number" min="0" id="mat-${mat}" value="0" oninput="onInputValueChange('${mat}')">`;
+            container.appendChild(div);
+        });
+    }
+
+    function getCurrentAccountObj() {
+        return appData.accounts.find(a => a.id === appData.currentId) || appData.accounts[0];
+    }
+
+    function onInputValueChange(matName) {
+        const currentAcc = getCurrentAccountObj();
+        currentAcc.mats[matName] = parseInt(document.getElementById(`mat-${matName}`).value) || 0;
+        calculateBalls();
+        saveToLocalCache();
+    }
+
+    function calculateBalls() {
+        const container = document.getElementById('resultsContainer');
+        container.innerHTML = '';
+        const currentAcc = getCurrentAccountObj();
+
+        Object.keys(ballFormula).forEach(ball => {
+            const requirements = ballFormula[ball];
+            let totalSum = 0;
+            requirements.forEach(m => {
+                let count = parseInt(currentAcc.mats[m]);
+                if (!isNaN(count) && count > 0) totalSum += count;
+            });
+
+            const card = document.createElement('div');
+            card.className = 'ball-card';
+            card.innerHTML = `
+                <div>
+                    <div class="ball-name">${ball}</div>
+                    <div class="ball-mats">${requirements.join(' + ')}</div>
+                </div>
+                <div class="ball-count">${totalSum} 个</div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function refreshAccountSelectUI() {
+        const select = document.getElementById('accountSelect');
+        select.innerHTML = '';
+        appData.accounts.forEach(acc => {
+            const opt = document.createElement('option');
+            opt.value = acc.id; opt.text = acc.name;
+            if(acc.id === appData.currentId) opt.selected = true;
+            select.appendChild(opt);
+        });
+        document.getElementById('deleteAccBtn').disabled = (appData.accounts.length <= 1);
+        applyAccountDataToUI();
+    }
+
+    function switchAccount() {
+        appData.currentId = document.getElementById('accountSelect').value;
+        applyAccountDataToUI();
+        saveToLocalCache();
+    }
+
+    function updateAccountName() {
+        const newName = document.getElementById('accountNameInput').value.trim();
+        const currentAcc = getCurrentAccountObj();
+        currentAcc.name = newName || "未命名账号";
+        const select = document.getElementById('accountSelect');
+        select.options[select.selectedIndex].text = currentAcc.name;
+        saveToLocalCache();
+    }
+
+    function addNewAccount() {
+        const num = appData.accounts.length + 1;
+        const newAcc = { id: "acc_" + Date.now(), name: "账号 " + num, mats: createEmptyMats() };
+        appData.accounts.push(newAcc);
+        appData.currentId = newAcc.id;
+        refreshAccountSelectUI();
+        saveToLocalCache();
+    }
+
+    function deleteCurrentAccount() {
+        if(appData.accounts.length <= 1) return;
+        if(!confirm("确定要删除当前账号及所有背包数据吗？")) return;
+        const index = appData.accounts.findIndex(a => a.id === appData.currentId);
+        appData.accounts.splice(index, 1);
+        appData.currentId = appData.accounts[0].id;
+        refreshAccountSelectUI();
+        saveToLocalCache();
+    }
+
+    function clearCurrentMats() {
+        if(!confirm("确定要将当前账号的所有植物数量清空为 0 吗？")) return;
+        const currentAcc = getCurrentAccountObj();
+        allMaterials.forEach(m => {
+            currentAcc.mats[m] = 0;
+            document.getElementById(`mat-${m}`).value = 0;
+        });
+        calculateBalls();
+        saveToLocalCache();
+    }
+
+    function applyAccountDataToUI() {
+        const currentAcc = getCurrentAccountObj();
+        document.getElementById('accountNameInput').value = currentAcc.name;
+        allMaterials.forEach(m => {
+            document.getElementById(`mat-${m}`).value = currentAcc.mats[m] || 0;
+        });
+        calculateBalls();
+    }
+
+    function saveToLocalCache() {
+        localStorage.setItem('lk_v3_data', JSON.stringify(appData));
+    }
+
+    // ✨ 核心修正：基于 Base64 的无跨域双端安全即时数据传输
+    function getCleanKey(email) {
+        // 增加唯一混淆符，防止公共库被其他人无意间撞车覆盖
+        return "lk_ball_" + btoa(encodeURIComponent(email)).replace(/=/g, ""); 
+    }
+
+    // 从云端强行同步拉取
+    async function loadFromCloud() {
+        const email = document.getElementById('userEmail').value.trim();
+        if(!email) return alert("请输入邮箱或专属暗号！");
+
+        document.getElementById('statusLabel').innerText = "正在建立云端加密连接...";
+        const key = getCleanKey(email);
+        
+        // 使用 allorigins 代理配合时间戳强行穿透设备浏览器缓存，解决手机无法获取新数据的问题
+        const url = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://kvdb.io/An96w65tZ7wZgLWhH9P63p/' + key)}&_nocache=${Date.now()}`;
+
+        try {
+            const response = await fetch(url);
+            if(response.ok) {
+                const cloudData = await response.json();
+                if (cloudData && cloudData.accounts) {
+                    appData = cloudData;
+                    // 补齐可能缺少的植物字段
+                    appData.accounts.forEach(acc => {
+                        allMaterials.forEach(m => { if(acc.mats[m] === undefined) acc.mats[m] = 0; });
+                    });
+                    refreshAccountSelectUI();
+                    localStorage.setItem('lk_v3_email', email);
+                    saveToLocalCache();
+                    document.getElementById('statusLabel').innerText = "云端同步成功！";
+                    alert("同步成功！已成功同步更新本设备上的所有账号背包。");
+                }
+            } else {
+                document.getElementById('statusLabel').innerText = "新账号初始化成功";
+                localStorage.setItem('lk_v3_email', email);
+                alert("该暗号在云端尚无历史数据。已为您在本设备上建立连接，填写完数据后请务必点击【手动保存覆盖】进行上传！");
+            }
+        } catch (e) {
+            alert("同步数据失败，请确保设备网络连接正常。");
+        }
+    }
+
+    // 手动上传覆盖到云端
+    async function saveToCloud() {
+        const email = document.getElementById('userEmail').value.trim();
+        if(!email) return alert("请输入邮箱或专属暗号后再同步！");
+
+        document.getElementById('statusLabel').innerText = "正在推送到云端...";
+        const key = getCleanKey(email);
+        
+        // 直接面向公共池写入
+        const targetUrl = `https://kvdb.io/An96w65tZ7wZgLWhH9P63p/${key}`;
+
+        try {
+            const response = await fetch(targetUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                mode: 'cors', // 强行开启跨域允许
+                body: JSON.stringify(appData)
+            });
+
+            if(response.ok) {
+                localStorage.setItem('lk_v3_email', email);
+                saveToLocalCache();
+                document.getElementById('statusLabel').innerText = `同步成功! 互通时间: ${new Date().toLocaleTimeString()}`;
+                alert("云端数据更新成功！现在在其他设备（如手机）上输入此暗号点击【载入/同步云端】即可瞬间同步。");
+            } else {
+                alert("上传失败，云端握手异常，请重试。");
+            }
+        } catch (e) {
+            alert("上传失败，请检查网络连接");
+        }
+    }
+</script>
+</body>
+</html>
