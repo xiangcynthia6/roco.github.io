@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>洛克王国咕噜球计算器 (矿物拓展与按位压缩版)</title>
+    <title>洛克王国咕噜球计算器 (安全短码防死锁版)</title>
     <script src="https://cdn.staticfile.org/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { --primary-color: #4a90e2; --bg-color: #f5f7fa; --card-bg: #ffffff; --text-color: #333; }
@@ -34,7 +34,6 @@
         .input-group { display: flex; align-items: center; justify-content: space-between; background: #fff; padding: 8px 12px; border-radius: 6px; border: 1px solid #e0e0e0; }
         .input-group input { width: 80px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-size: 14px; }
         
-        /* 特殊高亮新矿物输入的样式 */
         .input-group.mineral { border: 1px solid #9b59b6; background: #faf5fc; }
         
         .ball-card { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; margin-bottom: 12px; background: #fff; border-left: 5px solid var(--primary-color); border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
@@ -49,11 +48,11 @@
 <body>
 
 <div class="container">
-    <h1>洛克王国咕噜球计算器 (新矿物进化版)</h1>
+    <h1>洛克王国咕噜球计算器 (URL安全抗干扰版)</h1>
 
     <div class="sync-panel">
         <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; width: 100%;">
-            <button class="btn btn-success" onclick="shareCurrentAccountQR()">⚡ 生成超稀疏二维码</button>
+            <button class="btn btn-success" onclick="shareCurrentAccountQR()">⚡ 生成极速秒扫二维码</button>
             <button class="btn" style="background-color: #34495e;" onclick="exportAllDataText()">📋 备份/复制全套超短文本</button>
             <button class="btn" style="background-color: #9b59b6;" onclick="importDataText()">📥 粘贴超短文本恢复</button>
         </div>
@@ -82,7 +81,7 @@
             </div>
             <div id="resultsContainer"></div>
             <div style="margin-top: 20px; text-align: right;">
-                <span id="statusLabel" class="status-msg">十六进制高阶位流引擎运行中</span>
+                <span id="statusLabel" class="status-msg">URL安全比特隔离引擎已就绪</span>
             </div>
         </div>
     </div>
@@ -91,7 +90,7 @@
 <div class="modal" id="qrModal" onclick="closeModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
         <h3 id="qrTitle">📱 手机扫码同步</h3>
-        <p style="font-size: 12px; color: #555; margin-bottom: 5px;">加入新矿物后，位流流长依然锁定，秒速识别：</p>
+        <p style="font-size: 12px; color: #555; margin-bottom: 5px;">已剔除破坏性特殊字符，微信/手机相机均可100%秒识别：</p>
         <div id="qrcode"></div>
         <br>
         <button class="btn btn-danger" onclick="closeModal()">关闭窗口</button>
@@ -99,7 +98,6 @@
 </div>
 
 <script>
-    // 基础球配方不变
     const ballFormula = {
         "光合球": ["喵喵草", "象牙花", "凤眼莲"],
         "网兜球": ["海神花", "蓝掌", "风卷草", "喷气菇"],
@@ -112,14 +110,13 @@
         "变幻球": ["流星兰", "紫雀花", "紫晶菇"]
     };
 
-    // 核心改进：把新追加的4种矿物优雅排在最末尾，确保原有密文规则不被打乱
     const allMaterials = [
         "向阳花", "喵喵草", "蓝掌", "睡铃", "天使草", "石耳", "伞伞菌", 
         "蜜黄菌", "喷气菇", "凤眼莲", "幽幽草", "星霜花", "雪菇", "骨片", 
         "花星角", "荧光兰", "大嘴花", "流星兰", "紫晶菇", "海桑花", "恶魔雪茄", 
         "火焰花", "藻羽花", "彩玉花", "象牙花", "风卷草", "海珊瑚", "海神花", 
         "幽幽鬼火", "紫雀花", "洋红珊瑚", "杏黄贝", "短木莲",
-        "黑金琉璃", "黄石榴石", "蓝晶碧玺", "紫莲刚玉" // <-- 新加入的4项特殊矿物
+        "黑金琉璃", "黄石榴石", "蓝晶碧玺", "紫莲刚玉"
     ];
 
     const targetMinerals = ["黑金琉璃", "黄石榴石", "蓝晶碧玺", "紫莲刚玉"];
@@ -132,7 +129,20 @@
     appData.accounts[0].mats = createEmptyMats();
     appData.currentId = appData.accounts[0].id;
 
-    /* ==================== 🛠️ 统一底层的十六进制按位流编解码器 ==================== */
+    /* ==================== 🛠️ 核心进化：URL 安全级别高密闭双向过滤器 ==================== */
+
+    // 强效压缩并转化为 URL 绝对安全的密文（剔除 +, /, =）
+    function safeEncode(rawStr) {
+        let base64 = btoa(encodeURIComponent(rawStr));
+        return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    // 将安全密文完美还原
+    function safeDecode(safeStr) {
+        let base64 = safeStr.replace(/-/g, '+').replace(/_/g, '/');
+        while (base64.length % 4) { base64 += '='; }
+        return decodeURIComponent(atob(base64));
+    }
 
     function packAccountObj(accObj) {
         let hexStream = "";
@@ -140,7 +150,7 @@
             let val = parseInt(accObj.mats[matName]) || 0;
             if (val > 255) val = 255; 
             if (val < 0) val = 0;
-            hexStream += val.toString(16).padStart(2, '0'); // 每项完美霸占2位十六进制
+            hexStream += val.toString(16).padStart(2, '0');
         });
         return `${accObj.id}|${accObj.name}|${hexStream}`;
     }
@@ -153,7 +163,6 @@
             const hexStream = parts[2] || "";
             
             let restoredMats = createEmptyMats();
-            // 自动根据当前的allMaterials长度进行无缝切割读取
             for (let i = 0; i < allMaterials.length; i++) {
                 const subHex = hexStream.substr(i * 2, 2);
                 if (subHex) {
@@ -176,7 +185,8 @@
 
         if (compactParam) {
             try {
-                const decodedStr = decodeURIComponent(atob(compactParam));
+                // 使用全新的URL安全型解压机制
+                const decodedStr = safeDecode(compactParam);
                 const incomingAccount = unpackAccountStr(decodedStr);
                 if (incomingAccount) {
                     const idx = appData.accounts.findIndex(a => a.id === incomingAccount.id);
@@ -185,9 +195,9 @@
                     appData.currentId = incomingAccount.id;
                     saveToLocalCache();
                     window.history.replaceState({}, document.title, window.location.pathname);
-                    alert(`🎉 升级版位流同步成功！账号【${incomingAccount.name}】已成功融合！`);
+                    alert(`🎉 【高安全级别同步】账号【${incomingAccount.name}】数据已秒速导入！`);
                 }
-            } catch(e) { alert("同步数据解析失败。"); }
+            } catch(e) { alert("扫码接收出错，可能是旧版不兼容，请使用新版对敲同步。"); }
         }
 
         renderMaterialsInput();
@@ -198,10 +208,8 @@
         const container = document.getElementById('matsContainer'); container.innerHTML = '';
         allMaterials.forEach(mat => {
             const div = document.createElement('div');
-            // 判断是否是新加入的矿物，如果是，给一个特殊的高亮框样式
             const isMineral = targetMinerals.includes(mat);
             div.className = isMineral ? 'input-group mineral' : 'input-group';
-            
             div.innerHTML = `<label>${isMineral ? '💎 ' : ''}${mat}</label><input type="number" min="0" max="255" id="mat-${mat}" value="0" oninput="onInputValueChange('${mat}')">`;
             container.appendChild(div);
         });
@@ -220,20 +228,17 @@
         const container = document.getElementById('resultsContainer'); container.innerHTML = '';
         const currentAcc = getCurrentAccountObj();
 
-        // 🌟 新增功能：实时动态累加 4 种特殊矿物的总和
         let totalMineralsSum = 0;
         targetMinerals.forEach(m => {
             let count = parseInt(currentAcc.mats[m]) || 0;
             totalMineralsSum += count;
         });
 
-        // 首先渲染新增的“普通咕噜球”计算卡片
         const normalCard = document.createElement('div');
         normalCard.className = 'ball-card normal-ball';
         normalCard.innerHTML = `<div><div class="ball-name">普通咕噜球 (新)</div><div class="ball-mats">${targetMinerals.join(' + ')}</div></div><div class="ball-count">${totalMineralsSum} 个</div>`;
         container.appendChild(normalCard);
 
-        // 接着渲染原本的 9 种高级咕噜球
         Object.keys(ballFormula).forEach(ball => {
             const requirements = ballFormula[ball]; let totalSum = 0;
             requirements.forEach(m => {
@@ -289,24 +294,28 @@
     }
     function saveToLocalCache() { localStorage.setItem('lk_gist_data', JSON.stringify(appData)); }
 
+    // 修正：1. 生成彻底消灭特殊符号的安全网址二维码
     function shareCurrentAccountQR() {
         const currentAcc = getCurrentAccountObj();
-        const compactCode = btoa(encodeURIComponent(packAccountObj(currentAcc)));
+        // 升级：使用安全的编码替代原有 btoa
+        const compactCode = safeEncode(packAccountObj(currentAcc));
         const baseUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
         
         document.getElementById("qrcode").innerHTML = "";
         document.getElementById("qrTitle").innerText = `📱 同步账号: ${currentAcc.name}`;
         document.getElementById("qrModal").style.display = "flex";
 
+        // 优化：将容错修正级别从最高级 H 改为极速敏捷级别 M，格子会变得极为稀疏清爽
         new QRCode(document.getElementById("qrcode"), {
             text: baseUrl + "?c=" + compactCode,
-            width: 200, height: 200, colorDark : "#000000", colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
+            width: 220, height: 220, colorDark : "#000000", colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.M
         });
     }
 
     function closeModal() { document.getElementById("qrModal").style.display = "none"; }
 
+    // 修正：2. 文本导出同样经过安全处理，防止发微信被吞符号
     function exportAllDataText() {
         let allPackedArray = [];
         appData.accounts.forEach(acc => {
@@ -314,21 +323,22 @@
         });
         
         const finalBookStr = allPackedArray.join('#');
-        const ultraShortText = btoa(encodeURIComponent(finalBookStr));
+        const ultraShortText = safeEncode(finalBookStr);
 
         const temp = document.createElement("textarea");
         temp.value = ultraShortText; document.body.appendChild(temp);
         temp.select(); document.execCommand("copy"); document.body.removeChild(temp);
         
-        alert("📋 【拓展版位流短码】已成功复制！\n\n即使增加了矿物和全满状态，生成的代码依然精简优雅，完美跨端！");
+        alert("📋 【安全纯净短码】已复制！\n\n字符不含任何+、/、=标点，可在聊天软件中随意转发而不变质！");
     }
 
+    // 修正：3. 粘贴恢复兼容安全模式
     function importDataText() {
-        const code = prompt("请粘贴十六进制拓展本备份文本：");
+        const code = prompt("请粘贴新型十六进制全本备份文本：");
         if(!code || code.trim() === "") return;
         
         try {
-            const rawBookStr = decodeURIComponent(atob(code.trim()));
+            const rawBookStr = safeDecode(code.trim());
             const accountRawList = rawBookStr.split('#');
             
             let importedAccounts = [];
@@ -347,12 +357,12 @@
                 appData.currentId = lastId;
                 refreshAccountSelectUI();
                 saveToLocalCache();
-                alert(`🎉 矿物拓展包解压恢复成功！已还原 ${importedAccounts.length} 个账号数据！`);
+                alert(`🎉 安全短码解析成功！已顺利导入 ${importedAccounts.length} 个账号数据！`);
             } else {
                 alert("文本解析失败。");
             }
         } catch(e) {
-            alert("解析失败！如果您使用的是之前的超旧文本，由于缺少新增矿物的定长数据对齐，请两端使用新版重新导出。");
+            alert("解析失败！如果您跨版本传输了超老文本，请两端均刷新使用该版本重新对齐同步。");
         }
     }
 </script>
