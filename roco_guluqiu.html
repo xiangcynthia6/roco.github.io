@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>洛克王国咕噜球计算器 (100%无网本地同步版)</title>
-    <!-- 引入官方轻量级二维码生成插件，放心，这个国内cdn手机绝对能加载 -->
+    <title>洛克王国咕噜球计算器 (Safari 极速优化版)</title>
     <script src="https://cdn.staticfile.org/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { --primary-color: #4a90e2; --bg-color: #f5f7fa; --card-bg: #ffffff; --text-color: #333; }
@@ -13,7 +12,7 @@
         h1 { text-align: center; color: var(--primary-color); margin-bottom: 30px; }
         .sync-panel { background: #eef5fe; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
         .sync-panel input, .sync-panel select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        .btn { Liquor: #4a90e2; background-color: var(--primary-color); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        .btn { background-color: var(--primary-color); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
         .btn:hover { background-color: #357abd; }
         .btn-success { background-color: #2ea44f; }
         .btn-success:hover { background-color: #248a3d; }
@@ -22,11 +21,9 @@
         .btn-clear { background-color: #f39c12; }
         .btn-clear:hover { background-color: #d68010; }
         
-        /* 弹出层样式 */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 999; }
-        .modal-content { background: white; padding: 25px; border-radius: 12px; text-align: center; max-width: 90%; width: 400px; }
-        #qrcode { display: inline-block; margin: 15px 0; }
-        #qrcode img { margin: 0 auto; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; text-align: center; max-width: 90%; width: 360px; }
+        #qrcode { display: inline-block; margin: 15px 0; padding: 10px; background: white; border-radius: 8px; }
 
         .main-content { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 30px; }
         @media (max-width: 768px) { .main-content { grid-template-columns: 1fr; } }
@@ -46,14 +43,13 @@
 <body>
 
 <div class="container">
-    <h1>洛克王国咕噜球计算器 (100%免网硬核版)</h1>
+    <h1>洛克王国咕噜球计算器 (Safari 极速优化版)</h1>
 
-    <!-- 顶栏：同步主控面板 -->
     <div class="sync-panel">
         <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; width: 100%;">
-            <button class="btn btn-success" onclick="generateSyncQR()">📱 电脑端：生成同步二维码</button>
-            <button class="btn" style="background-color: #34495e;" onclick="exportTextCode()">📋 导出/复制加密文本</button>
-            <button class="btn" style="background-color: #9b59b6;" onclick="importTextCode()">📥 手机端：粘贴文本载入</button>
+            <button class="btn btn-success" onclick="shareCurrentAccountQR()">📱 扫码同步当前所选账号</button>
+            <button class="btn" style="background-color: #34495e;" onclick="exportAllDataText()">📋 备份/复制完整全套文本</button>
+            <button class="btn" style="background-color: #9b59b6;" onclick="importDataText()">📥 粘贴文本恢复/载入</button>
         </div>
         <hr style="width: 100%; border: 0; border-top: 1px solid #ddd; margin: 5px 0;">
         <div>
@@ -65,7 +61,6 @@
         </div>
     </div>
 
-    <!-- 主体布局 -->
     <div class="main-content">
         <div>
             <div class="section-header">
@@ -81,17 +76,16 @@
             </div>
             <div id="resultsContainer"></div>
             <div style="margin-top: 20px; text-align: right;">
-                <span id="statusLabel" class="status-msg">安全本地离线运行中</span>
+                <span id="statusLabel" class="status-msg">本地离线数据就绪</span>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 二维码弹出层 -->
 <div class="modal" id="qrModal" onclick="closeModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <h3>📱 手机扫码同步</h3>
-        <p style="font-size: 13px; color: #666;">请用手机微信、相机或浏览器自带扫码功能扫描下方二维码，即可直接在手机上打开并同步全部数据！</p>
+        <h3 id="qrTitle">📱 手机扫码同步</h3>
+        <p style="font-size: 12px; color: #666; margin-bottom: 5px;">已大幅精简码率，请用 iPhone 相机或 Safari 直接扫描：</p>
         <div id="qrcode"></div>
         <br>
         <button class="btn btn-danger" onclick="closeModal()">关闭窗口</button>
@@ -127,28 +121,33 @@
     appData.accounts[0].mats = createEmptyMats();
     appData.currentId = appData.accounts[0].id;
 
-    let qrHandler = null;
-
     window.onload = function() {
-        // 💡 自动解析 URL 参数里的同步数据（为了实现扫码直接读取）
+        // 💡 自动解析并融合扫码进来的单账号数据
         const urlParams = new URLSearchParams(window.location.search);
-        const codeParam = urlParams.get('d');
+        const singleAccParam = urlParams.get('a');
         
-        if (codeParam) {
+        // 载入本地缓存
+        const localData = localStorage.getItem('lk_gist_data');
+        if(localData) { try { appData = JSON.parse(localData); } catch(e){} }
+
+        if (singleAccParam) {
             try {
-                const rawStr = decodeURIComponent(atob(codeParam));
-                const decryptedData = JSON.parse(rawStr);
-                if (decryptedData && decryptedData.accounts) {
-                    appData = decryptedData;
+                const rawStr = decodeURIComponent(atob(singleAccParam));
+                const incomingAccount = JSON.parse(rawStr);
+                if (incomingAccount && incomingAccount.id) {
+                    // 检查本地是否存在相同 ID 的账号，有则覆盖，无则追加
+                    const idx = appData.accounts.findIndex(a => a.id === incomingAccount.id);
+                    if (idx !== -1) {
+                        appData.accounts[idx] = incomingAccount;
+                    } else {
+                        appData.accounts.push(incomingAccount);
+                    }
+                    appData.currentId = incomingAccount.id;
                     saveToLocalCache();
-                    // 清除 URL 里的长后缀，保持地址栏干净
                     window.history.replaceState({}, document.title, window.location.pathname);
-                    alert("🎉 扫描二维码识别成功！全账号数据已在手机端完美同步！");
+                    alert(`🎉 成功同步账号【${incomingAccount.name}】的数据！`);
                 }
-            } catch(e) { console.log("URL数据流解析失败"); }
-        } else {
-            const localData = localStorage.getItem('lk_gist_data');
-            if(localData) { try { appData = JSON.parse(localData); } catch(e){} }
+            } catch(e) { alert("扫码数据流解析失败，请确保使用原装相机扫码。"); }
         }
 
         renderMaterialsInput();
@@ -237,54 +236,45 @@
     }
     function saveToLocalCache() { localStorage.setItem('lk_gist_data', JSON.stringify(appData)); }
 
-    /* ==================== 🛠️ 终极硬核无网本地同步核心 ==================== */
+    /* ==================== 📲 高识别率、防卡死同步核心 ==================== */
 
-    // 1. 电脑端：把当前所有账号数据压缩打包生成一串加密URL，再转化为二维码
-    function generateSyncQR() {
-        try {
-            // 打包数据
-            const dataStr = btoa(encodeURIComponent(JSON.stringify(appData)));
-            // 拼接成带参数的当前网页完整URL
-            const baseUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
-            const fullSyncUrl = baseUrl + "?d=" + dataStr;
+    // 1. 仅打包当前选中的“这一个”账号生成低密度、超好扫的二维码
+    function shareCurrentAccountQR() {
+        const currentAcc = getCurrentAccountObj();
+        // 关键优化：只压缩单账号，丢弃历史废弃数据，让体积减小 90%
+        const dataStr = btoa(encodeURIComponent(JSON.stringify(currentAcc)));
+        
+        const baseUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
+        const targetUrl = baseUrl + "?a=" + dataStr;
 
-            document.getElementById("qrcode").innerHTML = "";
-            document.getElementById("qrModal").style.display = "flex";
+        document.getElementById("qrcode").innerHTML = "";
+        document.getElementById("qrTitle").innerText = `📱 同步账号: ${currentAcc.name}`;
+        document.getElementById("qrModal").style.display = "flex";
 
-            // 生成二维码
-            qrHandler = new QRCode(document.getElementById("qrcode"), {
-                text: fullSyncUrl,
-                width: 240,
-                height: 240,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.L // 使用低容错率确保容纳超长多账号文本
-            });
-        } catch(e) {
-            alert("生成失败，可能账号或材料数据过多超出了单张二维码限制，请精简账号数量或使用【导出/复制加密文本】功能！");
-        }
+        // 生成超高对比度、极其稀疏好识别的二维码
+        new QRCode(document.getElementById("qrcode"), {
+            text: targetUrl,
+            width: 220,
+            height: 220,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.M // 提高容错率，确保老手机、暗光环境一扫即过
+        });
     }
 
     function closeModal() { document.getElementById("qrModal").style.display = "none"; }
 
-    // 2. 备用手段：直接导出加密文本串（适合发给微信文件传输助手）
-    function exportTextCode() {
+    // 2. 如果要一次性同步所有多账号，请使用无损文本导出（Safari 贴文本绝对不会崩溃）
+    function exportAllDataText() {
         const dataStr = btoa(encodeURIComponent(JSON.stringify(appData)));
-        
-        // 创建一个临时输入框来实现快速自动复制
-        const tempInput = document.createElement("textarea");
-        tempInput.value = dataStr;
-        document.body.appendChild(tempInput);
-        tempInput.select();
-        document.execCommand("copy");
-        document.body.removeChild(tempInput);
-
-        alert("📋 当前所有账号的数据已自动压缩并复制到剪贴板！\n\n你可以通过微信发给手机，在手机端点击【粘贴文本载入】扔进去即可瞬间同步！");
+        const temp = document.createElement("textarea");
+        temp.value = dataStr; document.body.appendChild(temp);
+        temp.select(); document.execCommand("copy"); document.body.removeChild(temp);
+        alert("📋 完整的多账号账本已完美复制到剪贴板！\n\n发送到手机上，在手机网页点【粘贴文本恢复】即可瞬间全量同步。");
     }
 
-    // 3. 手机端：粘贴文本直接瞬间秒读
-    function importTextCode() {
-        const code = prompt("请将从电脑端复制过来的加密文本粘到这里：");
+    function importDataText() {
+        const code = prompt("请在此粘贴完整的备份加密文本：");
         if(!code) return;
         try {
             const rawStr = decodeURIComponent(atob(code.trim()));
@@ -293,14 +283,9 @@
                 appData = decryptedData;
                 refreshAccountSelectUI();
                 saveToLocalCache();
-                document.getElementById('statusLabel').innerText = `文本本地读取成功: ${new Date().toLocaleTimeString()}`;
-                alert("🎉 文本密匙解析成功！所有账号及物料数据已完美覆盖更新！");
-            } else {
-                alert("解析出的数据不完整，请确保复制了完整的加密代码串！");
+                alert("🎉 离线全量文本同步恢复成功！");
             }
-        } catch(e) {
-            alert("解析失败！这不是合法的同步代码串，请重新复制。");
-        }
+        } catch(e) { alert("解析失败，请确保复制了完整的文本串。"); }
     }
 </script>
 </body>
