@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>洛克王国咕噜球计算器 (极限压缩好扫版)</title>
+    <title>洛克王国咕噜球计算器 (终极文本精简版)</title>
     <script src="https://cdn.staticfile.org/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { --primary-color: #4a90e2; --bg-color: #f5f7fa; --card-bg: #ffffff; --text-color: #333; }
@@ -43,13 +43,13 @@
 <body>
 
 <div class="container">
-    <h1>洛克王国咕噜球计算器 (Safari 闪电扫码版)</h1>
+    <h1>洛克王国咕噜球计算器 (双向高压缩版)</h1>
 
     <div class="sync-panel">
         <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; width: 100%;">
-            <button class="btn btn-success" onclick="shareCurrentAccountQR()">⚡ 电脑端：生成极稀疏好扫二维码</button>
-            <button class="btn" style="background-color: #34495e;" onclick="exportAllDataText()">📋 备份/复制全套文本</button>
-            <button class="btn" style="background-color: #9b59b6;" onclick="importDataText()">📥 粘贴文本恢复/载入</button>
+            <button class="btn btn-success" onclick="shareCurrentAccountQR()">⚡ 电脑端：生成极稀疏二维码</button>
+            <button class="btn" style="background-color: #34495e;" onclick="exportAllDataText()">📋 备份/复制全套超短文本</button>
+            <button class="btn" style="background-color: #9b59b6;" onclick="importDataText()">📥 粘贴超短文本恢复</button>
         </div>
         <hr style="width: 100%; border: 0; border-top: 1px solid #ddd; margin: 5px 0;">
         <div>
@@ -121,8 +121,38 @@
     appData.accounts[0].mats = createEmptyMats();
     appData.currentId = appData.accounts[0].id;
 
+    // 通用解压核心算法：将超短文本流还原为结构化账号数据
+    function unpackAccountStr(accountString) {
+        const parts = accountString.split('|');
+        if (parts.length >= 3) {
+            const accId = parts[0];
+            const accName = parts[1];
+            const matPairs = parts[2] ? parts[2].split(',') : [];
+            
+            let restoredMats = createEmptyMats();
+            matPairs.forEach(pair => {
+                const kv = pair.split(':');
+                if(kv.length === 2) {
+                    const matName = allMaterials[parseInt(kv[0])];
+                    if(matName) restoredMats[matName] = parseInt(kv[1]) || 0;
+                }
+            });
+            return { id: accId, name: accName, mats: restoredMats };
+        }
+        return null;
+    }
+
+    // 通用压缩核心算法：将单个账号剔除0并数字化ID
+    function packAccountObj(accObj) {
+        let compactPairs = [];
+        allMaterials.forEach((matName, index) => {
+            const val = parseInt(accObj.mats[matName]) || 0;
+            if(val > 0) compactPairs.push(`${index}:${val}`);
+        });
+        return `${accObj.id}|${accObj.name}|${compactPairs.join(',')}`;
+    }
+
     window.onload = function() {
-        // 解析超级无敌精简 URL
         const urlParams = new URLSearchParams(window.location.search);
         const compactParam = urlParams.get('c');
         
@@ -131,36 +161,18 @@
 
         if (compactParam) {
             try {
-                // 还原压缩字典
                 const decodedStr = decodeURIComponent(atob(compactParam));
-                const parts = decodedStr.split('|');
-                if(parts.length >= 3) {
-                    const accId = parts[0];
-                    const accName = parts[1];
-                    const matPairs = parts[2] ? parts[2].split(',') : [];
-                    
-                    let restoredMats = createEmptyMats();
-                    matPairs.forEach(pair => {
-                        const kv = pair.split(':');
-                        if(kv.length === 2) {
-                            const matName = allMaterials[parseInt(kv[0])];
-                            if(matName) restoredMats[matName] = parseInt(kv[1]) || 0;
-                        }
-                    });
-
-                    const incomingAccount = { id: accId, name: accName, mats: restoredMats };
+                const incomingAccount = unpackAccountStr(decodedStr);
+                if (incomingAccount) {
                     const idx = appData.accounts.findIndex(a => a.id === incomingAccount.id);
-                    if (idx !== -1) {
-                        appData.accounts[idx] = incomingAccount;
-                    } else {
-                        appData.accounts.push(incomingAccount);
-                    }
+                    if (idx !== -1) appData.accounts[idx] = incomingAccount;
+                    else appData.accounts.push(incomingAccount);
                     appData.currentId = incomingAccount.id;
                     saveToLocalCache();
                     window.history.replaceState({}, document.title, window.location.pathname);
-                    alert(`🎉 [海外专属] 扫码秒识别成功！账号【${incomingAccount.name}】已同步。`);
+                    alert(`🎉 扫码接收账号【${incomingAccount.name}】成功！`);
                 }
-            } catch(e) { console.log(e); alert("还原压缩数据失败。"); }
+            } catch(e) { alert("扫码数据解析失败。"); }
         }
 
         renderMaterialsInput();
@@ -242,62 +254,77 @@
     }
     function saveToLocalCache() { localStorage.setItem('lk_gist_data', JSON.stringify(appData)); }
 
-    /* ==================== 📲 骨架瘦身级极限压缩核心 ==================== */
+    /* ==================== 📲 双向极轻量级文本压缩机制 ==================== */
 
+    // 1. 扫单账号二维码（保持极度稀疏）
     function shareCurrentAccountQR() {
         const currentAcc = getCurrentAccountObj();
-        
-        // 🌟 1. 骨架压缩算法：只打包非0数据，且用索引代替中文名字
-        let compactPairs = [];
-        allMaterials.forEach((matName, index) => {
-            const val = parseInt(currentAcc.mats[matName]) || 0;
-            if(val > 0) {
-                compactPairs.push(`${index}:${val}`); // 压缩成 "1:12" 的极短格式
-            }
-        });
-
-        // 组成极小数据链： ID|名称|1:12,4:5
-        const finalRawStr = `${currentAcc.id}|${currentAcc.name}|${compactPairs.join(',')}`;
-        const compactCode = btoa(encodeURIComponent(finalRawStr));
-        
+        const compactCode = btoa(encodeURIComponent(packAccountObj(currentAcc)));
         const baseUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
-        const targetUrl = baseUrl + "?c=" + compactCode;
-
+        
         document.getElementById("qrcode").innerHTML = "";
         document.getElementById("qrTitle").innerText = `📱 同步账号: ${currentAcc.name}`;
         document.getElementById("qrModal").style.display = "flex";
 
-        // 🌟 2. 生成格子极大、极好扫的超轻量二维码
         new QRCode(document.getElementById("qrcode"), {
-            text: targetUrl,
-            width: 200,
-            height: 200,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H // 提升到最高容错等级，哪怕屏幕有反光或抖动也能100%识别！
+            text: baseUrl + "?c=" + compactCode,
+            width: 200, height: 200, colorDark : "#000000", colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
         });
     }
 
     function closeModal() { document.getElementById("qrModal").style.display = "none"; }
 
+    // 2. 导出所有账号：用 `#` 把多个瘦身后的账号数据连在一起，进行全本高阶压缩
     function exportAllDataText() {
-        const dataStr = btoa(encodeURIComponent(JSON.stringify(appData)));
+        let allPackedArray = [];
+        appData.accounts.forEach(acc => {
+            allPackedArray.push(packAccountObj(acc));
+        });
+        
+        // 最终格式： 账号1#账号2#账号3  然后再Base64一把
+        const finalBookStr = allPackedArray.join('#');
+        const ultraShortText = btoa(encodeURIComponent(finalBookStr));
+
         const temp = document.createElement("textarea");
-        temp.value = dataStr; document.body.appendChild(temp);
+        temp.value = ultraShortText; document.body.appendChild(temp);
         temp.select(); document.execCommand("copy"); document.body.removeChild(temp);
-        alert("📋 全账号全量数据复制成功！");
+        
+        alert("📋 【全本极短密钥】已自动复制！\n\n数据已经被压榨到了极限，现在这段代码只有一两行，你可以极为清爽地发给手机了！");
     }
 
+    // 3. 导入所有账号：解析超短文本并完美恢复整个账本
     function importDataText() {
-        const code = prompt("请输入加密文本："); if(!code) return;
+        const code = prompt("请在此粘贴超短全本备份文本：");
+        if(!code || code.trim() === "") return;
+        
         try {
-            const rawStr = decodeURIComponent(atob(code.trim()));
-            const decryptedData = JSON.parse(rawStr);
-            if(decryptedData && decryptedData.accounts) {
-                appData = decryptedData; refreshAccountSelectUI(); saveToLocalCache();
-                alert("🎉 全量多账号恢复成功！");
+            const rawBookStr = decodeURIComponent(atob(code.trim()));
+            const accountRawList = rawBookStr.split('#');
+            
+            let importedAccounts = [];
+            let lastId = "";
+            
+            accountRawList.forEach(accStr => {
+                const unpacked = unpackAccountStr(accStr);
+                if (unpacked) {
+                    importedAccounts.push(unpacked);
+                    lastId = unpacked.id;
+                }
+            });
+
+            if (importedAccounts.length > 0) {
+                appData.accounts = importedAccounts;
+                appData.currentId = lastId;
+                refreshAccountSelectUI();
+                saveToLocalCache();
+                alert(`🎉 极短全本密钥解析成功！已完美恢复 ${importedAccounts.length} 个账号的数据！`);
+            } else {
+                alert("未能从文本中解析出有效的账号，请确保文本完整。");
             }
-        } catch(e) { alert("解析失败。"); }
+        } catch(e) {
+            alert("解析失败！该文本不符合新型极限压缩规则，如果是老版本的长文本，请清空后重新从新版电脑端导出。");
+        }
     }
 </script>
 </body>
