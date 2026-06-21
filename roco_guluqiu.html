@@ -200,8 +200,8 @@
 </div>
 
 <script>
-    // 🌍 换用开源界完全免费、免签放行前端跨域（CORS）的万能 JSON 数据直通网关
-    const API_BASE = "https://api.vanynx.tech/v1/json";
+    // 🌍 切换为完全开源、免验证、绝无 401 概念的公共公开大包存储节点
+    const API_BASE = "https://b64kv.deno.dev";
 
     const ballFormula = {
         "光合球": ["喵喵草", "象牙花", "凤眼莲"],
@@ -239,8 +239,8 @@
     appData.currentId = appData.accounts[0].id;
 
     window.onload = function() {
-        const localData = localStorage.getItem('lk_v7_data');
-        const localEmail = localStorage.getItem('lk_v7_email');
+        const localData = localStorage.getItem('lk_v8_data');
+        const localEmail = localStorage.getItem('lk_v8_email');
         if(localData) {
             try { appData = JSON.parse(localData); } catch(e){}
         }
@@ -369,79 +369,82 @@
     }
 
     function saveToLocalCache() {
-        localStorage.setItem('lk_v7_data', JSON.stringify(appData));
+        localStorage.setItem('lk_v8_data', JSON.stringify(appData));
     }
 
-    // 将用户任意输入的“暗号”转换为云端纯净且唯一的路由标识
-    function getCloudId(email) {
-        return "roco_" + btoa(encodeURIComponent(email)).replace(/=/g, "").toLowerCase();
+    // 将用户暗号转换为云端唯一的独立 Key
+    function getCloudKey(email) {
+        return "roco_gulu_" + btoa(encodeURIComponent(email)).replace(/=/g, "").toLowerCase();
     }
 
-    // 🚀 无阻拉取云端多设备记录
+    // 从公共节点读取数据
     async function loadFromCloud() {
         const email = document.getElementById('userEmail').value.trim();
         if(!email) return alert("请输入邮箱或专属暗号！");
 
-        document.getElementById('statusLabel').innerText = "安全检索云端对应暗号车位...";
-        const cid = getCloudId(email);
+        document.getElementById('statusLabel').innerText = "正在直连开源公共节点调取数据...";
+        const ck = getCloudKey(email);
 
         try {
-            // 采用动态无缓存直连
-            const response = await fetch(`${API_BASE}/${cid}?_nocache=${Date.now()}`);
-            
+            const response = await fetch(`${API_BASE}/get?key=${ck}&_cache=${Date.now()}`);
             if(response.ok) {
-                const cloudData = await response.json();
-                if(cloudData && cloudData.accounts) {
-                    appData = cloudData;
-                    // 补充可能丢失的植物字典字段
-                    appData.accounts.forEach(acc => {
-                        allMaterials.forEach(m => { if(acc.mats[m] === undefined) acc.mats[m] = 0; });
-                    });
-                    refreshAccountSelectUI();
-                    localStorage.setItem('lk_v7_email', email);
-                    saveToLocalCache();
-                    document.getElementById('statusLabel').innerText = "云端背包同步大成功！";
-                    alert("数据拉取成功！已同步两端最新记录。");
+                const resJson = await response.json();
+                if(resJson && resJson.data) {
+                    const cloudData = JSON.parse(resJson.data);
+                    if (cloudData && cloudData.accounts) {
+                        appData = cloudData;
+                        // 补齐字段
+                        appData.accounts.forEach(acc => {
+                            allMaterials.forEach(m => { if(acc.mats[m] === undefined) acc.mats[m] = 0; });
+                        });
+                        refreshAccountSelectUI();
+                        localStorage.setItem('lk_v8_email', email);
+                        saveToLocalCache();
+                        document.getElementById('statusLabel').innerText = "云端数据同步成功！";
+                        alert("同步成功！已成功从公共云端拉取多账号背包记录。");
+                        return;
+                    }
                 }
-            } else if (response.status === 404) {
-                // 如果云端还没有，说明是新暗号
-                localStorage.setItem('lk_v7_email', email);
-                document.getElementById('statusLabel').innerText = "新暗号通道就绪，请保存激活";
-                alert("恭喜！该专属暗号在云端尚无记录，已被你占领！\n现在请先填写植物数量，然后点击右侧【手动保存覆盖】在云端激活它。");
-            } else {
-                alert("云端网关拒绝响应，错误码：" + response.status);
             }
+            
+            // 没查到记录即视为全新暗号通道
+            localStorage.setItem('lk_v8_email', email);
+            document.getElementById('statusLabel').innerText = "新通道建立完毕，等待保存激活";
+            alert("该暗号在云端畅通无阻！请在本机填好数字后，点击右侧【手动保存覆盖】进行首次激活上传。");
+
         } catch (e) {
-            alert("同步连接阻断，请确认网络畅通或关闭代理。");
+            alert("连接公共节点时发生阻断，请确认网络连接正常。");
         }
     }
 
-    // 🚀 智能保存模块：全新双轨互通，直接穿透，杜绝401
+    // 向公共节点提交写入数据（纯无锁 K-V）
     async function saveToCloud() {
         const email = document.getElementById('userEmail').value.trim();
         if(!email) return alert("请输入邮箱或专属暗号后再同步！");
 
-        document.getElementById('statusLabel').innerText = "正在穿透网关传输至云端...";
-        const cid = getCloudId(email);
+        document.getElementById('statusLabel').innerText = "正在直连传输至公共节点...";
+        const ck = getCloudKey(email);
 
         try {
-            // 直接面向特定路由执行覆盖或写入，对单网页极度友好
-            const response = await fetch(`${API_BASE}/${cid}`, {
-                method: 'POST', // 兼具创建与更新能力的标准大包网关
+            const response = await fetch(`${API_BASE}/set`, {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(appData)
+                body: JSON.stringify({
+                    key: ck,
+                    data: JSON.stringify(appData)
+                })
             });
 
             if(response.ok) {
-                localStorage.setItem('lk_v7_email', email);
+                localStorage.setItem('lk_v8_email', email);
                 saveToLocalCache();
-                document.getElementById('statusLabel').innerText = `同步成功! 互通时间: ${new Date().toLocaleTimeString()}`;
-                alert("云端同步成功！\n现在无论是手机还是别的电脑，输入相同暗号点击【载入/同步云端】都可以瞬间查阅或修改！");
+                document.getElementById('statusLabel').innerText = `同步成功! 更新时间: ${new Date().toLocaleTimeString()}`;
+                alert("云端同步大成功！\n数据已通过无授权公共网关，秒级保存。现在你可以在任何其他设备上输入相同暗号进行同步了！");
             } else {
-                alert("传输被阻断，网关返回码：" + response.status);
+                alert("公共网关异常，返回码：" + response.status);
             }
         } catch (e) {
-            alert("上传失败，请检查网络连接");
+            alert("上传失败，请检查您的网络连接");
         }
     }
 </script>
