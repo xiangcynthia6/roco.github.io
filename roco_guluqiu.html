@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>洛克王国咕噜球计算器</title>
+    <title>洛克王国咕噜球计算器 (GitHub 云同步版)</title>
     <style>
         :root {
             --primary-color: #4a90e2;
@@ -34,7 +34,7 @@
             color: var(--primary-color);
             margin-bottom: 30px;
         }
-        /* 同步与多账号控制面板 */
+        /* 控制面板 */
         .sync-panel {
             background: #eef5fe;
             padding: 15px 20px;
@@ -69,30 +69,6 @@
         .btn-clear { background-color: #f39c12; }
         .btn-clear:hover { background-color: #d68010; }
 
-        /* 备用纯文本同步面板样式 */
-        .backup-area {
-            background: #fff3cd;
-            border: 1px solid #ffeeba;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        .backup-area textarea {
-            width: 100%;
-            height: 60px;
-            margin-top: 10px;
-            margin-bottom: 10px;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 12px;
-            box-sizing: border-box;
-            resize: vertical;
-        }
-
         /* 主体布局 */
         .main-content {
             display: grid;
@@ -118,7 +94,7 @@
             margin: 0;
         }
 
-        /* 植物输入双列布局 */
+        /* 植物输入 */
         .grid-inputs {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -136,10 +112,6 @@
             border-radius: 6px;
             border: 1px solid #e0e0e0;
         }
-        .input-group label {
-            font-size: 14px;
-            color: #555;
-        }
         .input-group input {
             width: 80px;
             padding: 6px;
@@ -149,7 +121,7 @@
             font-size: 14px;
         }
 
-        /* 右侧结果卡片样式 */
+        /* 结果卡片 */
         .ball-card {
             display: flex;
             justify-content: space-between;
@@ -162,49 +134,30 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
         .ball-name { font-weight: bold; font-size: 16px; color: #2c3e50; }
-        .ball-count {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2ea44f;
-        }
-        .ball-mats {
-            font-size: 12px;
-            color: #7f8c8d;
-            margin-top: 5px;
-        }
-        .status-msg {
-            font-size: 14px;
-            color: #666;
-            font-style: italic;
-        }
+        .ball-count { font-size: 24px; font-weight: bold; color: #2ea44f; }
+        .ball-mats { font-size: 12px; color: #7f8c8d; margin-top: 5px; }
+        .status-msg { font-size: 14px; color: #666; font-style: italic; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>洛克王国咕噜球计算器</h1>
+    <h1>洛克王国咕噜球计算器 (GitHub 极速云同步版)</h1>
 
     <div class="sync-panel">
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; width: 100%;">
+            <label><b>🔑 GitHub 专属 Token:</b> </label>
+            <input type="password" id="ghToken" placeholder="粘贴您的 ghp_ 开头的 Token" style="width: 260px;" onchange="saveTokenLocal()">
+            <button class="btn" style="background-color: #24292e;" onclick="loadFromGitHub()">🔄 载入/拉取云端</button>
+            <button class="btn btn-success" onclick="saveToGitHub()">⚡ 一键静默推送到云端</button>
+        </div>
+        <hr style="width: 100%; border: 0; border-top: 1px solid #ddd; margin: 5px 0;">
         <div>
-            <label><b>1. 选择账号:</b> </label>
+            <label><b>👥 切换当前账号:</b> </label>
             <select id="accountSelect" onchange="switchAccount()"></select>
             <input type="text" id="accountNameInput" placeholder="自定义当前账号名" style="width: 130px;" oninput="updateAccountName()">
             <button class="btn" style="background-color: #9b59b6;" onclick="addNewAccount()">+ 添加新账号</button>
             <button class="btn btn-danger" id="deleteAccBtn" onclick="deleteCurrentAccount()">删除此号</button>
-        </div>
-        <div style="margin-left: auto; display: flex; gap: 8px;">
-            <input type="text" id="userEmail" placeholder="输入同步暗号" style="width: 120px;">
-            <button class="btn" onclick="loadFromCloud()">云端同步</button>
-            <button class="btn btn-success" onclick="saveToCloud()">云端保存</button>
-        </div>
-    </div>
-
-    <div class="backup-area">
-        <label style="color: #856404; font-weight: bold;">⚠️ 无论网络有无报错，均可在此处生成/粘贴“同步代码块”实现手动秒级跨端互通：</label>
-        <textarea id="backupTextarea" placeholder="在这里点击【生成当前全账号备份】，或者把另一台设备生成的代码粘贴到这里点击【导入全账号备份】..."></textarea>
-        <div style="display: flex; gap: 10px;">
-            <button class="btn" style="background-color: #e67e22;" onclick="generateBackupCode()">📋 生成当前全账号备份代码</button>
-            <button class="btn" style="background-color: #2c3e50;" onclick="importBackupCode()">📥 导入框内备份并覆盖本地</button>
         </div>
     </div>
 
@@ -223,15 +176,13 @@
             </div>
             <div id="resultsContainer"></div>
             <div style="margin-top: 20px; text-align: right;">
-                <span id="statusLabel" class="status-msg">已启用本地安全缓存模式</span>
+                <span id="statusLabel" class="status-msg">尚未绑定 GitHub 令牌，目前处于本地缓存状态</span>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    const API_BASE = "https://b64kv.deno.dev";
-
     const ballFormula = {
         "光合球": ["喵喵草", "象牙花", "凤眼莲"],
         "网兜球": ["海神花", "蓝掌", "风卷草", "喷气菇"],
@@ -253,9 +204,7 @@
     ];
     
     let appData = {
-        accounts: [
-            { id: "acc_" + Date.now(), name: "账号一", mats: {} }
-        ],
+        accounts: [{ id: "acc_" + Date.now(), name: "账号一", mats: {} }],
         currentId: ""
     };
 
@@ -268,12 +217,13 @@
     appData.currentId = appData.accounts[0].id;
 
     window.onload = function() {
-        const localData = localStorage.getItem('lk_v9_data');
-        const localEmail = localStorage.getItem('lk_v9_email');
-        if(localData) {
-            try { appData = JSON.parse(localData); } catch(e){}
+        const localData = localStorage.getItem('lk_gist_data');
+        const savedToken = localStorage.getItem('lk_github_token');
+        if(localData) { try { appData = JSON.parse(localData); } catch(e){} }
+        if(savedToken) {
+            document.getElementById('ghToken').value = savedToken;
+            document.getElementById('statusLabel').innerText = "已加载本地密钥，点击【载入/拉取云端】即可同步。";
         }
-        if(localEmail) document.getElementById('userEmail').value = localEmail;
 
         renderMaterialsInput();
         refreshAccountSelectUI();
@@ -290,10 +240,7 @@
         });
     }
 
-    function getCurrentAccountObj() {
-        return appData.accounts.find(a => a.id === appData.currentId) || appData.accounts[0];
-    }
-
+    function getCurrentAccountObj() { return appData.accounts.find(a => a.id === appData.currentId) || appData.accounts[0]; }
     function onInputValueChange(matName) {
         const currentAcc = getCurrentAccountObj();
         currentAcc.mats[matName] = parseInt(document.getElementById(`mat-${matName}`).value) || 0;
@@ -305,7 +252,6 @@
         const container = document.getElementById('resultsContainer');
         container.innerHTML = '';
         const currentAcc = getCurrentAccountObj();
-
         Object.keys(ballFormula).forEach(ball => {
             const requirements = ballFormula[ball];
             let totalSum = 0;
@@ -313,16 +259,9 @@
                 let count = parseInt(currentAcc.mats[m]);
                 if (!isNaN(count) && count > 0) totalSum += count;
             });
-
             const card = document.createElement('div');
             card.className = 'ball-card';
-            card.innerHTML = `
-                <div>
-                    <div class="ball-name">${ball}</div>
-                    <div class="ball-mats">${requirements.join(' + ')}</div>
-                </div>
-                <div class="ball-count">${totalSum} 个</div>
-            `;
+            card.innerHTML = `<div><div class="ball-name">${ball}</div><div class="ball-mats">${requirements.join(' + ')}</div></div><div class="ball-count">${totalSum} 个</div>`;
             container.appendChild(card);
         });
     }
@@ -340,156 +279,143 @@
         applyAccountDataToUI();
     }
 
-    function switchAccount() {
-        appData.currentId = document.getElementById('accountSelect').value;
-        applyAccountDataToUI();
-        saveToLocalCache();
-    }
-
+    function switchAccount() { appData.currentId = document.getElementById('accountSelect').value; refreshAccountSelectUI(); saveToLocalCache(); }
     function updateAccountName() {
         const newName = document.getElementById('accountNameInput').value.trim();
         const currentAcc = getCurrentAccountObj();
         currentAcc.name = newName || "未命名账号";
-        const select = document.getElementById('accountSelect');
-        select.options[select.selectedIndex].text = currentAcc.name;
+        document.getElementById('accountSelect').options[document.getElementById('accountSelect').selectedIndex].text = currentAcc.name;
         saveToLocalCache();
     }
-
     function addNewAccount() {
-        const num = appData.accounts.length + 1;
-        const newAcc = { id: "acc_" + Date.now(), name: "账号 " + num, mats: createEmptyMats() };
-        appData.accounts.push(newAcc);
-        appData.currentId = newAcc.id;
-        refreshAccountSelectUI();
-        saveToLocalCache();
+        const newAcc = { id: "acc_" + Date.now(), name: "账号 " + (appData.accounts.length + 1), mats: createEmptyMats() };
+        appData.accounts.push(newAcc); appData.currentId = newAcc.id; refreshAccountSelectUI(); saveToLocalCache();
     }
-
     function deleteCurrentAccount() {
         if(appData.accounts.length <= 1) return;
-        if(!confirm("确定要删除当前账号及所有背包数据吗？")) return;
-        const index = appData.accounts.findIndex(a => a.id === appData.currentId);
-        appData.accounts.splice(index, 1);
-        appData.currentId = appData.accounts[0].id;
-        refreshAccountSelectUI();
-        saveToLocalCache();
+        if(!confirm("确定要删除当前账号吗？")) return;
+        appData.accounts.splice(appData.accounts.findIndex(a => a.id === appData.currentId), 1);
+        appData.currentId = appData.accounts[0].id; refreshAccountSelectUI(); saveToLocalCache();
     }
-
     function clearCurrentMats() {
-        if(!confirm("确定要将当前账号的所有植物数量清空为 0 吗？")) return;
+        if(!confirm("确定清空吗？")) return;
         const currentAcc = getCurrentAccountObj();
-        allMaterials.forEach(m => {
-            currentAcc.mats[m] = 0;
-            document.getElementById(`mat-${m}`).value = 0;
-        });
-        calculateBalls();
-        saveToLocalCache();
+        allMaterials.forEach(m => { currentAcc.mats[m] = 0; document.getElementById(`mat-${m}`).value = 0; });
+        calculateBalls(); saveToLocalCache();
     }
-
     function applyAccountDataToUI() {
         const currentAcc = getCurrentAccountObj();
         document.getElementById('accountNameInput').value = currentAcc.name;
-        allMaterials.forEach(m => {
-            document.getElementById(`mat-${m}`).value = currentAcc.mats[m] || 0;
-        });
+        allMaterials.forEach(m => { document.getElementById(`mat-${m}`).value = currentAcc.mats[m] || 0; });
         calculateBalls();
     }
+    function saveToLocalCache() { localStorage.setItem('lk_gist_data', JSON.stringify(appData)); }
+    function saveTokenLocal() { localStorage.setItem('lk_github_token', document.getElementById('ghToken').value.trim()); }
 
-    function saveToLocalCache() {
-        localStorage.setItem('lk_v9_data', JSON.stringify(appData));
+    /* ==================== ⚡ 核心逻辑：GitHub Gist 官方管道直连同步 ==================== */
+
+    // 获取授权请求头
+    function getHeaders(token) {
+        return {
+            "Authorization": `token ${token}`,
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json"
+        };
     }
 
-    /* ================= 🌟 方案：万能离线文本数据备份互通模块（100%成功率） ================= */
-    
-    // 生成当前多账号数据的纯文本备份块
-    function generateBackupCode() {
-        try {
-            const dataStr = JSON.stringify(appData);
-            // 采用标准 Base64 加密压缩保护，防止复制时乱码
-            const encodedData = btoa(encodeURIComponent(dataStr));
-            document.getElementById('backupTextarea').value = encodedData;
-            document.getElementById('backupTextarea').select();
-            document.execCommand('copy'); // 自动帮忙复制到剪贴板
-            document.getElementById('statusLabel').innerText = "多账号数据已打包并自动复制到系统剪贴板！";
-            alert("打包成功且已自动复制！\n你可以直接去微信、QQ或备忘录里粘贴发送给另外一台设备。");
-        } catch (e) {
-            alert("生成备份时遇到未知异常");
-        }
+    // 辅助函数：寻找专门用来存本计算器数据的私密代码片段
+    async function findOurGist(token) {
+        const response = await fetch("https://api.github.com/gists", { headers: getHeaders(token) });
+        if(!response.ok) throw new Error("Token失效或无网络权限，状态码：" + response.status);
+        const gists = await response.json();
+        // 根据内部特有文件名定位
+        return gists.find(g => g.files && g.files["roco_gulu_data.json"]);
     }
 
-    // 从框内读取外部多账号文本覆盖本地
-    function importBackupCode() {
-        const rawCode = document.getElementById('backupTextarea').value.trim();
-        if(!rawCode) return alert("请先将另一台设备生成的长串加密代码粘贴进黄色框内！");
-        
-        if(!confirm("确定要导入此备份吗？这将会【完全覆盖】当前设备上的所有账号数据！")) return;
-
-        try {
-            const decodedStr = decodeURIComponent(atob(rawCode));
-            const parsedData = JSON.parse(decodedStr);
-            
-            if(parsedData && parsedData.accounts && parsedData.accounts.length > 0) {
-                appData = parsedData;
-                // 自动合并缺失的植物包完整字段
-                appData.accounts.forEach(acc => {
-                    allMaterials.forEach(m => { if(acc.mats[m] === undefined) acc.mats[m] = 0; });
-                });
-                
-                refreshAccountSelectUI();
-                saveToLocalCache();
-                document.getElementById('backupTextarea').value = "";
-                document.getElementById('statusLabel').innerText = "本地全账号背包已被文本成功覆盖！";
-                alert("🎉 导入覆盖大成功！所有多账号和植物数字已瞬间加载完毕！");
-            } else {
-                alert("导入失败：备份数据格式不正确！");
-            }
-        } catch (e) {
-            alert("导入失败：代码可能不完整或在复制传输中被损毁，请重新复制。");
-        }
-    }
-
-    /* ================= 以下为原云端模块（保留作为多轨参考） ================= */
-    function getCloudKey(email) { return "roco_gulu_" + btoa(encodeURIComponent(email)).replace(/=/g, "").toLowerCase(); }
-
+    // 🔄 从 GitHub 云端无痛下载
     async function loadFromCloud() {
-        const email = document.getElementById('userEmail').value.trim();
-        if(!email) return alert("请输入暗号！");
-        const ck = getCloudKey(email);
+        const token = document.getElementById('ghToken').value.trim();
+        if(!token) return alert("请先填入您的 GitHub Token！");
+        
+        document.getElementById('statusLabel').innerText = "正在安全握手并拉取 GitHub 云端快照...";
         try {
-            const response = await fetch(`${API_BASE}/get?key=${ck}&_cache=${Date.now()}`);
-            if(response.ok) {
-                const resJson = await response.json();
-                if(resJson && resJson.data) {
-                    appData = JSON.parse(resJson.data);
+            const targetGist = await findOurGist(token);
+            if(!targetGist) {
+                document.getElementById('statusLabel').innerText = "云端尚未激活档案，请直接点击保存按钮初始化。";
+                alert("您是首次使用该Token同步！云端目前为空。请修改完数据后点击【一键静默推送到云端】即可自动激活建立车位。");
+                return;
+            }
+
+            // 获取该文件的源文本内容
+            const fileUrl = targetGist.files["roco_gulu_data.json"].raw_url;
+            const fileResponse = await fetch(fileUrl, { headers: getHeaders(token) });
+            if(fileResponse.ok) {
+                const cloudData = await fileResponse.json();
+                if(cloudData && cloudData.accounts) {
+                    appData = cloudData;
+                    // 动态对齐补齐可能新增的植物
+                    appData.accounts.forEach(acc => {
+                        allMaterials.forEach(m => { if(acc.mats[m] === undefined) acc.mats[m] = 0; });
+                    });
                     refreshAccountSelectUI();
-                    localStorage.setItem('lk_v9_email', email);
                     saveToLocalCache();
-                    alert("云端同步拉取成功！");
-                    return;
+                    document.getElementById('statusLabel').innerText = `同步成功! 最新同步时间: ${new Date().toLocaleTimeString()}`;
+                    alert("🎉 官方管道同步拉取成功！数据已更新为最新云端版本。");
                 }
             }
-            alert("该暗号在云端尚无记录，可在本设备点保存激活。");
         } catch (e) {
-            alert("云端同步失败：检测到当前设备网络拦截了外部CORS通道。请直接使用下方【黄色区域文本备份】实现无缝互联！");
+            alert("拉取失败：" + e.message + "\n请确保您勾选了 gist 读写权限，且没有开启奇怪的网络墙拦截 github.com");
+            document.getElementById('statusLabel').innerText = "连接失败";
         }
     }
 
-    async function saveToCloud() {
-        const email = document.getElementById('userEmail').value.trim();
-        if(!email) return alert("请输入暗号！");
-        const ck = getCloudKey(email);
+    // ⚡ 一键静默推送到云端（如果有就更新，没有就自动新建）
+    async function saveToGitHub() {
+        const token = document.getElementById('ghToken').value.trim();
+        if(!token) return alert("请先输入您的 GitHub Token 才能启用自动同步！");
+
+        document.getElementById('statusLabel').innerText = "正在直接向 GitHub 官方安全通道推送最新数据...";
+        
+        const bodyData = {
+            description: "洛克王国咕噜球多账号背包云同步数据备份",
+            public: false, // 💡 强力设定为：Private 绝对私密片段，任何人无法查看
+            files: {
+                "roco_gulu_data.json": {
+                    content: JSON.stringify(appData, null, 2)
+                }
+            }
+        };
+
         try {
-            const response = await fetch(`${API_BASE}/set`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key: ck, data: JSON.stringify(appData) })
-            });
+            const targetGist = await findOurGist(token);
+            let response;
+
+            if(targetGist) {
+                // 如果云端已经建过车位了，执行 PATCH 更新
+                response = await fetch(`https://api.github.com/gists/${targetGist.id}`, {
+                    method: "PATCH",
+                    headers: getHeaders(token),
+                    body: JSON.stringify(bodyData)
+                });
+            } else {
+                // 如果是干干净净的新用户，执行 POST 首次创建
+                response = await fetch("https://api.github.com/gists", {
+                    method: "POST",
+                    headers: getHeaders(token),
+                    body: JSON.stringify(bodyData)
+                });
+            }
+
             if(response.ok) {
-                localStorage.setItem('lk_v9_email', email);
                 saveToLocalCache();
-                alert("云端保存成功！");
-            } else { alert("网关拒绝写入"); }
+                document.getElementById('statusLabel').innerText = `云端备份成功! 刷新时刻: ${new Date().toLocaleTimeString()}`;
+                alert("🚀 一键推送大成功！\n数据已保存到你个人的私密代码片段中。现在在手机上打开这个网页，输同一个 Token 点击【载入/拉取云端】就能直接拉取了！");
+            } else {
+                alert("GitHub 拒绝了写入请求，错误码：" + response.status);
+            }
         } catch (e) {
-            alert("云端保存失败，请直接使用下方【黄色区域文本备份】进行零网络阻碍的100%成功数据互通！");
+            alert("传输阻断：" + e.message);
+            document.getElementById('statusLabel').innerText = "推送失败";
         }
     }
 </script>
