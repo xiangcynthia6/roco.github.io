@@ -200,8 +200,8 @@
 </div>
 
 <script>
-    // 换用无跨域拦截、高响应稳定的公共前端分布式 K-V 存储群组 API
-    const API_BASE = "https://api.allorigins.win/raw?url=https://jsonbin.org/guluoke_calc_2026/";
+    // 采用直连、免代理、自带高跨域支持的公共云存储桶
+    const API_PREFIX = "https://kvdb.io/An96w65tZ7wZgLWhH9P63p/"; 
 
     const ballFormula = {
         "光合球": ["喵喵草", "象牙花", "凤眼莲"],
@@ -239,8 +239,8 @@
     appData.currentId = appData.accounts[0].id;
 
     window.onload = function() {
-        const localData = localStorage.getItem('lk_v3_data');
-        const localEmail = localStorage.getItem('lk_v3_email');
+        const localData = localStorage.getItem('lk_v4_data');
+        const localEmail = localStorage.getItem('lk_v4_email');
         if(localData) {
             try { appData = JSON.parse(localData); } catch(e){}
         }
@@ -369,78 +369,83 @@
     }
 
     function saveToLocalCache() {
-        localStorage.setItem('lk_v3_data', JSON.stringify(appData));
+        localStorage.setItem('lk_v4_data', JSON.stringify(appData));
     }
 
-    // ✨ 核心修正：基于 Base64 的无跨域双端安全即时数据传输
+    // 生成纯净的分布式键名（加上独特前缀防撞车）
     function getCleanKey(email) {
-        // 增加唯一混淆符，防止公共库被其他人无意间撞车覆盖
-        return "lk_ball_" + btoa(encodeURIComponent(email)).replace(/=/g, ""); 
+        return "r_gulu_" + btoa(encodeURIComponent(email)).replace(/=/g, ""); 
     }
 
-    // 从云端强行同步拉取
+    // ✨ 修复：直连拉取云端数据，加入时间戳穿透手机浏览器缓存
     async function loadFromCloud() {
         const email = document.getElementById('userEmail').value.trim();
         if(!email) return alert("请输入邮箱或专属暗号！");
 
-        document.getElementById('statusLabel').innerText = "正在建立云端加密连接...";
+        document.getElementById('statusLabel').innerText = "正在从云端调取最新数据...";
         const key = getCleanKey(email);
-        
-        // 使用 allorigins 代理配合时间戳强行穿透设备浏览器缓存，解决手机无法获取新数据的问题
-        const url = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://kvdb.io/An96w65tZ7wZgLWhH9P63p/' + key)}&_nocache=${Date.now()}`;
+        const url = `${API_PREFIX}${key}?_t=${Date.now()}`;
 
         try {
             const response = await fetch(url);
-            if(response.ok) {
+            if(response.status === 200) {
                 const cloudData = await response.json();
+                
                 if (cloudData && cloudData.accounts) {
                     appData = cloudData;
-                    // 补齐可能缺少的植物字段
-                    appData.accounts.forEach(acc => {
-                        allMaterials.forEach(m => { if(acc.mats[m] === undefined) acc.mats[m] = 0; });
-                    });
-                    refreshAccountSelectUI();
-                    localStorage.setItem('lk_v3_email', email);
-                    saveToLocalCache();
-                    document.getElementById('statusLabel').innerText = "云端同步成功！";
-                    alert("同步成功！已成功同步更新本设备上的所有账号背包。");
+                } else {
+                    // 兼容老格式旧数据
+                    appData.accounts = [
+                        { id: "acc_1", name: cloudData.account1?.name || "账号一", mats: cloudData.account1?.mats || createEmptyMats() }
+                    ];
+                    appData.currentId = "acc_1";
                 }
+
+                // 补齐植物字段
+                appData.accounts.forEach(acc => {
+                    allMaterials.forEach(m => { if(acc.mats[m] === undefined) acc.mats[m] = 0; });
+                });
+
+                refreshAccountSelectUI();
+                localStorage.setItem('lk_v4_email', email);
+                saveToLocalCache();
+                document.getElementById('statusLabel').innerText = "云端数据已完全同步！";
+                alert("同步成功！已成功载入该暗号在云端保存的数据。");
+            } else if(response.status === 404) {
+                document.getElementById('statusLabel').innerText = "云端新暗号初始化完毕";
+                localStorage.setItem('lk_v4_email', email);
+                alert("云端未发现历史数据，已为您在本设备上绑定该暗号！输入完数据后记得点击【手动保存覆盖】上传。");
             } else {
-                document.getElementById('statusLabel').innerText = "新账号初始化成功";
-                localStorage.setItem('lk_v3_email', email);
-                alert("该暗号在云端尚无历史数据。已为您在本设备上建立连接，填写完数据后请务必点击【手动保存覆盖】进行上传！");
+                alert("从云端调取数据失败，状态码：" + response.status);
             }
         } catch (e) {
-            alert("同步数据失败，请确保设备网络连接正常。");
+            alert("同步连接建立失败。请检查本地网络或稍后再试。");
         }
     }
 
-    // 手动上传覆盖到云端
+    // ✨ 修复：直连推送到云端池
     async function saveToCloud() {
         const email = document.getElementById('userEmail').value.trim();
         if(!email) return alert("请输入邮箱或专属暗号后再同步！");
 
-        document.getElementById('statusLabel').innerText = "正在推送到云端...";
+        document.getElementById('statusLabel').innerText = "正在向云端广播同步请求...";
         const key = getCleanKey(email);
-        
-        // 直接面向公共池写入
-        const targetUrl = `https://kvdb.io/An96w65tZ7wZgLWhH9P63p/${key}`;
+        const url = `${API_PREFIX}${key}`;
 
         try {
-            const response = await fetch(targetUrl, {
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                mode: 'cors', // 强行开启跨域允许
                 body: JSON.stringify(appData)
             });
 
             if(response.ok) {
-                localStorage.setItem('lk_v3_email', email);
+                localStorage.setItem('lk_v4_email', email);
                 saveToLocalCache();
                 document.getElementById('statusLabel').innerText = `同步成功! 互通时间: ${new Date().toLocaleTimeString()}`;
-                alert("云端数据更新成功！现在在其他设备（如手机）上输入此暗号点击【载入/同步云端】即可瞬间同步。");
+                alert("所有账号的数据已成功同步覆盖至云端！现在在其他设备上拉取即可。");
             } else {
-                alert("上传失败，云端握手异常，请重试。");
+                alert("上传失败，云端存储响应异常，状态码：" + response.status);
             }
         } catch (e) {
             alert("上传失败，请检查网络连接");
