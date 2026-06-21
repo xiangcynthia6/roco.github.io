@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>洛克王国咕噜球计算器 (十六进制二进制级压缩版)</title>
+    <title>洛克王国咕噜球计算器 (矿物拓展与按位压缩版)</title>
     <script src="https://cdn.staticfile.org/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { --primary-color: #4a90e2; --bg-color: #f5f7fa; --card-bg: #ffffff; --text-color: #333; }
@@ -33,9 +33,15 @@
         @media (max-width: 480px) { .grid-inputs { grid-template-columns: 1fr; } }
         .input-group { display: flex; align-items: center; justify-content: space-between; background: #fff; padding: 8px 12px; border-radius: 6px; border: 1px solid #e0e0e0; }
         .input-group input { width: 80px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-size: 14px; }
+        
+        /* 特殊高亮新矿物输入的样式 */
+        .input-group.mineral { border: 1px solid #9b59b6; background: #faf5fc; }
+        
         .ball-card { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; margin-bottom: 12px; background: #fff; border-left: 5px solid var(--primary-color); border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .ball-card.normal-ball { border-left: 5px solid #e67e22; background: #fdfaf7; }
         .ball-name { font-weight: bold; font-size: 16px; color: #2c3e50; }
         .ball-count { font-size: 24px; font-weight: bold; color: #2ea44f; }
+        .ball-card.normal-ball .ball-count { color: #e67e22; }
         .ball-mats { font-size: 12px; color: #7f8c8d; margin-top: 5px; }
         .status-msg { font-size: 14px; color: #2ea44f; font-weight: bold; }
     </style>
@@ -43,11 +49,11 @@
 <body>
 
 <div class="container">
-    <h1>洛克王国咕噜球计算器 (十六进制比特流压缩版)</h1>
+    <h1>洛克王国咕噜球计算器 (新矿物进化版)</h1>
 
     <div class="sync-panel">
         <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; width: 100%;">
-            <button class="btn btn-success" onclick="shareCurrentAccountQR()">⚡ 电脑端：生成超稀疏二维码</button>
+            <button class="btn btn-success" onclick="shareCurrentAccountQR()">⚡ 生成超稀疏二维码</button>
             <button class="btn" style="background-color: #34495e;" onclick="exportAllDataText()">📋 备份/复制全套超短文本</button>
             <button class="btn" style="background-color: #9b59b6;" onclick="importDataText()">📥 粘贴超短文本恢复</button>
         </div>
@@ -64,7 +70,7 @@
     <div class="main-content">
         <div>
             <div class="section-header">
-                <h2 class="section-title">请输入当前植物背包数量</h2>
+                <h2 class="section-title">请输入当前植物背包与矿物数量</h2>
                 <button class="btn btn-clear" onclick="clearCurrentMats()">🗑️ 清空当前背包</button>
             </div>
             <div class="grid-inputs" id="matsContainer"></div>
@@ -76,7 +82,7 @@
             </div>
             <div id="resultsContainer"></div>
             <div style="margin-top: 20px; text-align: right;">
-                <span id="statusLabel" class="status-msg">离线比特流引擎就绪</span>
+                <span id="statusLabel" class="status-msg">十六进制高阶位流引擎运行中</span>
             </div>
         </div>
     </div>
@@ -85,7 +91,7 @@
 <div class="modal" id="qrModal" onclick="closeModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
         <h3 id="qrTitle">📱 手机扫码同步</h3>
-        <p style="font-size: 12px; color: #555; margin-bottom: 5px;">基于位流压缩，全满数据下二维码依然极大好扫：</p>
+        <p style="font-size: 12px; color: #555; margin-bottom: 5px;">加入新矿物后，位流流长依然锁定，秒速识别：</p>
         <div id="qrcode"></div>
         <br>
         <button class="btn btn-danger" onclick="closeModal()">关闭窗口</button>
@@ -93,6 +99,7 @@
 </div>
 
 <script>
+    // 基础球配方不变
     const ballFormula = {
         "光合球": ["喵喵草", "象牙花", "凤眼莲"],
         "网兜球": ["海神花", "蓝掌", "风卷草", "喷气菇"],
@@ -105,13 +112,17 @@
         "变幻球": ["流星兰", "紫雀花", "紫晶菇"]
     };
 
+    // 核心改进：把新追加的4种矿物优雅排在最末尾，确保原有密文规则不被打乱
     const allMaterials = [
         "向阳花", "喵喵草", "蓝掌", "睡铃", "天使草", "石耳", "伞伞菌", 
         "蜜黄菌", "喷气菇", "凤眼莲", "幽幽草", "星霜花", "雪菇", "骨片", 
         "花星角", "荧光兰", "大嘴花", "流星兰", "紫晶菇", "海桑花", "恶魔雪茄", 
         "火焰花", "藻羽花", "彩玉花", "象牙花", "风卷草", "海珊瑚", "海神花", 
-        "幽幽鬼火", "紫雀花", "洋红珊瑚", "杏黄贝", "短木莲"
+        "幽幽鬼火", "紫雀花", "洋红珊瑚", "杏黄贝", "短木莲",
+        "黑金琉璃", "黄石榴石", "蓝晶碧玺", "紫莲刚玉" // <-- 新加入的4项特殊矿物
     ];
+
+    const targetMinerals = ["黑金琉璃", "黄石榴石", "蓝晶碧玺", "紫莲刚玉"];
     
     let appData = { accounts: [{ id: "acc_" + Date.now(), name: "账号一", mats: {} }], currentId: "" };
 
@@ -121,22 +132,19 @@
     appData.accounts[0].mats = createEmptyMats();
     appData.currentId = appData.accounts[0].id;
 
-    /* ==================== 🛠️ 核心：十六进制定长位流压缩算法 ==================== */
+    /* ==================== 🛠️ 统一底层的十六进制按位流编解码器 ==================== */
 
-    // 压缩：将单个账号压成固定 66 位的十六进制串
     function packAccountObj(accObj) {
         let hexStream = "";
         allMaterials.forEach(matName => {
             let val = parseInt(accObj.mats[matName]) || 0;
-            if (val > 255) val = 255; // 限制单项最大255，防止位流溢出
+            if (val > 255) val = 255; 
             if (val < 0) val = 0;
-            // 转化为2位十六进制，不足的前面补0 (例如 12 -> '0c')
-            hexStream += val.toString(16).padStart(2, '0');
+            hexStream += val.toString(16).padStart(2, '0'); // 每项完美霸占2位十六进制
         });
         return `${accObj.id}|${accObj.name}|${hexStream}`;
     }
 
-    // 解压：完美还原固定 66 位的十六进制串
     function unpackAccountStr(accountString) {
         const parts = accountString.split('|');
         if (parts.length >= 3) {
@@ -145,7 +153,7 @@
             const hexStream = parts[2] || "";
             
             let restoredMats = createEmptyMats();
-            // 每2位切开，对应一个物料
+            // 自动根据当前的allMaterials长度进行无缝切割读取
             for (let i = 0; i < allMaterials.length; i++) {
                 const subHex = hexStream.substr(i * 2, 2);
                 if (subHex) {
@@ -177,7 +185,7 @@
                     appData.currentId = incomingAccount.id;
                     saveToLocalCache();
                     window.history.replaceState({}, document.title, window.location.pathname);
-                    alert(`🎉 双向位流同步：账号【${incomingAccount.name}】导入成功！`);
+                    alert(`🎉 升级版位流同步成功！账号【${incomingAccount.name}】已成功融合！`);
                 }
             } catch(e) { alert("同步数据解析失败。"); }
         }
@@ -190,8 +198,11 @@
         const container = document.getElementById('matsContainer'); container.innerHTML = '';
         allMaterials.forEach(mat => {
             const div = document.createElement('div');
-            div.className = 'input-group';
-            div.innerHTML = `<label>${mat}</label><input type="number" min="0" max="255" id="mat-${mat}" value="0" oninput="onInputValueChange('${mat}')">`;
+            // 判断是否是新加入的矿物，如果是，给一个特殊的高亮框样式
+            const isMineral = targetMinerals.includes(mat);
+            div.className = isMineral ? 'input-group mineral' : 'input-group';
+            
+            div.innerHTML = `<label>${isMineral ? '💎 ' : ''}${mat}</label><input type="number" min="0" max="255" id="mat-${mat}" value="0" oninput="onInputValueChange('${mat}')">`;
             container.appendChild(div);
         });
     }
@@ -208,6 +219,21 @@
     function calculateBalls() {
         const container = document.getElementById('resultsContainer'); container.innerHTML = '';
         const currentAcc = getCurrentAccountObj();
+
+        // 🌟 新增功能：实时动态累加 4 种特殊矿物的总和
+        let totalMineralsSum = 0;
+        targetMinerals.forEach(m => {
+            let count = parseInt(currentAcc.mats[m]) || 0;
+            totalMineralsSum += count;
+        });
+
+        // 首先渲染新增的“普通咕噜球”计算卡片
+        const normalCard = document.createElement('div');
+        normalCard.className = 'ball-card normal-ball';
+        normalCard.innerHTML = `<div><div class="ball-name">普通咕噜球 (新)</div><div class="ball-mats">${targetMinerals.join(' + ')}</div></div><div class="ball-count">${totalMineralsSum} 个</div>`;
+        container.appendChild(normalCard);
+
+        // 接着渲染原本的 9 种高级咕噜球
         Object.keys(ballFormula).forEach(ball => {
             const requirements = ballFormula[ball]; let totalSum = 0;
             requirements.forEach(m => {
@@ -263,7 +289,6 @@
     }
     function saveToLocalCache() { localStorage.setItem('lk_gist_data', JSON.stringify(appData)); }
 
-    // 1. 生成单账号位流二维码
     function shareCurrentAccountQR() {
         const currentAcc = getCurrentAccountObj();
         const compactCode = btoa(encodeURIComponent(packAccountObj(currentAcc)));
@@ -282,7 +307,6 @@
 
     function closeModal() { document.getElementById("qrModal").style.display = "none"; }
 
-    // 2. 双向全量导出：无论满不满，体积永远被死死限制住
     function exportAllDataText() {
         let allPackedArray = [];
         appData.accounts.forEach(acc => {
@@ -296,12 +320,11 @@
         temp.value = ultraShortText; document.body.appendChild(temp);
         temp.select(); document.execCommand("copy"); document.body.removeChild(temp);
         
-        alert("📋 【究极位流短码】已复制！\n\n通过底层十六进制重构，现在即使每一项都填满数字，生成的代码依然只有极短的一两行！");
+        alert("📋 【拓展版位流短码】已成功复制！\n\n即使增加了矿物和全满状态，生成的代码依然精简优雅，完美跨端！");
     }
 
-    // 3. 双向全量导入
     function importDataText() {
-        const code = prompt("请粘贴新型十六进制全本备份文本：");
+        const code = prompt("请粘贴十六进制拓展本备份文本：");
         if(!code || code.trim() === "") return;
         
         try {
@@ -324,12 +347,12 @@
                 appData.currentId = lastId;
                 refreshAccountSelectUI();
                 saveToLocalCache();
-                alert(`🎉 究极位流同步恢复成功！已导入 ${importedAccounts.length} 个账号！`);
+                alert(`🎉 矿物拓展包解压恢复成功！已还原 ${importedAccounts.length} 个账号数据！`);
             } else {
-                alert("文本解析失败，请确保文本完整。");
+                alert("文本解析失败。");
             }
         } catch(e) {
-            alert("解析失败！为了配合最新的十六进制算法，请在两端都刷新并使用这套新系统进行双向同步。");
+            alert("解析失败！如果您使用的是之前的超旧文本，由于缺少新增矿物的定长数据对齐，请两端使用新版重新导出。");
         }
     }
 </script>
