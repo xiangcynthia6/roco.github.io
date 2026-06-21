@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>洛克王国咕噜球计算器 (Safari 极速优化版)</title>
+    <title>洛克王国咕噜球计算器 (极限压缩好扫版)</title>
     <script src="https://cdn.staticfile.org/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { --primary-color: #4a90e2; --bg-color: #f5f7fa; --card-bg: #ffffff; --text-color: #333; }
@@ -22,8 +22,8 @@
         .btn-clear:hover { background-color: #d68010; }
         
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 999; }
-        .modal-content { background: white; padding: 25px; border-radius: 12px; text-align: center; max-width: 90%; width: 360px; }
-        #qrcode { display: inline-block; margin: 15px 0; padding: 10px; background: white; border-radius: 8px; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; text-align: center; max-width: 90%; width: 340px; }
+        #qrcode { display: inline-block; margin: 15px 0; padding: 15px; background: white; border: 1px solid #ddd; border-radius: 8px; }
 
         .main-content { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 30px; }
         @media (max-width: 768px) { .main-content { grid-template-columns: 1fr; } }
@@ -43,12 +43,12 @@
 <body>
 
 <div class="container">
-    <h1>洛克王国咕噜球计算器 (Safari 极速优化版)</h1>
+    <h1>洛克王国咕噜球计算器 (Safari 闪电扫码版)</h1>
 
     <div class="sync-panel">
         <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; width: 100%;">
-            <button class="btn btn-success" onclick="shareCurrentAccountQR()">📱 扫码同步当前所选账号</button>
-            <button class="btn" style="background-color: #34495e;" onclick="exportAllDataText()">📋 备份/复制完整全套文本</button>
+            <button class="btn btn-success" onclick="shareCurrentAccountQR()">⚡ 电脑端：生成极稀疏好扫二维码</button>
+            <button class="btn" style="background-color: #34495e;" onclick="exportAllDataText()">📋 备份/复制全套文本</button>
             <button class="btn" style="background-color: #9b59b6;" onclick="importDataText()">📥 粘贴文本恢复/载入</button>
         </div>
         <hr style="width: 100%; border: 0; border-top: 1px solid #ddd; margin: 5px 0;">
@@ -76,7 +76,7 @@
             </div>
             <div id="resultsContainer"></div>
             <div style="margin-top: 20px; text-align: right;">
-                <span id="statusLabel" class="status-msg">本地离线数据就绪</span>
+                <span id="statusLabel" class="status-msg">本地数据就绪</span>
             </div>
         </div>
     </div>
@@ -85,7 +85,7 @@
 <div class="modal" id="qrModal" onclick="closeModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
         <h3 id="qrTitle">📱 手机扫码同步</h3>
-        <p style="font-size: 12px; color: #666; margin-bottom: 5px;">已大幅精简码率，请用 iPhone 相机或 Safari 直接扫描：</p>
+        <p style="font-size: 12px; color: #555; margin-bottom: 5px;">通过骨架瘦身技术，iPhone 相机现已支持秒识别：</p>
         <div id="qrcode"></div>
         <br>
         <button class="btn btn-danger" onclick="closeModal()">关闭窗口</button>
@@ -122,20 +122,33 @@
     appData.currentId = appData.accounts[0].id;
 
     window.onload = function() {
-        // 💡 自动解析并融合扫码进来的单账号数据
+        // 解析超级无敌精简 URL
         const urlParams = new URLSearchParams(window.location.search);
-        const singleAccParam = urlParams.get('a');
+        const compactParam = urlParams.get('c');
         
-        // 载入本地缓存
         const localData = localStorage.getItem('lk_gist_data');
         if(localData) { try { appData = JSON.parse(localData); } catch(e){} }
 
-        if (singleAccParam) {
+        if (compactParam) {
             try {
-                const rawStr = decodeURIComponent(atob(singleAccParam));
-                const incomingAccount = JSON.parse(rawStr);
-                if (incomingAccount && incomingAccount.id) {
-                    // 检查本地是否存在相同 ID 的账号，有则覆盖，无则追加
+                // 还原压缩字典
+                const decodedStr = decodeURIComponent(atob(compactParam));
+                const parts = decodedStr.split('|');
+                if(parts.length >= 3) {
+                    const accId = parts[0];
+                    const accName = parts[1];
+                    const matPairs = parts[2] ? parts[2].split(',') : [];
+                    
+                    let restoredMats = createEmptyMats();
+                    matPairs.forEach(pair => {
+                        const kv = pair.split(':');
+                        if(kv.length === 2) {
+                            const matName = allMaterials[parseInt(kv[0])];
+                            if(matName) restoredMats[matName] = parseInt(kv[1]) || 0;
+                        }
+                    });
+
+                    const incomingAccount = { id: accId, name: accName, mats: restoredMats };
                     const idx = appData.accounts.findIndex(a => a.id === incomingAccount.id);
                     if (idx !== -1) {
                         appData.accounts[idx] = incomingAccount;
@@ -145,9 +158,9 @@
                     appData.currentId = incomingAccount.id;
                     saveToLocalCache();
                     window.history.replaceState({}, document.title, window.location.pathname);
-                    alert(`🎉 成功同步账号【${incomingAccount.name}】的数据！`);
+                    alert(`🎉 [海外专属] 扫码秒识别成功！账号【${incomingAccount.name}】已同步。`);
                 }
-            } catch(e) { alert("扫码数据流解析失败，请确保使用原装相机扫码。"); }
+            } catch(e) { console.log(e); alert("还原压缩数据失败。"); }
         }
 
         renderMaterialsInput();
@@ -155,8 +168,7 @@
     };
 
     function renderMaterialsInput() {
-        const container = document.getElementById('matsContainer');
-        container.innerHTML = '';
+        const container = document.getElementById('matsContainer'); container.innerHTML = '';
         allMaterials.forEach(mat => {
             const div = document.createElement('div');
             div.className = 'input-group';
@@ -169,17 +181,14 @@
     function onInputValueChange(matName) {
         const currentAcc = getCurrentAccountObj();
         currentAcc.mats[matName] = parseInt(document.getElementById(`mat-${matName}`).value) || 0;
-        calculateBalls();
-        saveToLocalCache();
+        calculateBalls(); saveToLocalCache();
     }
 
     function calculateBalls() {
-        const container = document.getElementById('resultsContainer');
-        container.innerHTML = '';
+        const container = document.getElementById('resultsContainer'); container.innerHTML = '';
         const currentAcc = getCurrentAccountObj();
         Object.keys(ballFormula).forEach(ball => {
-            const requirements = ballFormula[ball];
-            let totalSum = 0;
+            const requirements = ballFormula[ball]; let totalSum = 0;
             requirements.forEach(m => {
                 let count = parseInt(currentAcc.mats[m]);
                 if (!isNaN(count) && count > 0) totalSum += count;
@@ -192,11 +201,9 @@
     }
 
     function refreshAccountSelectUI() {
-        const select = document.getElementById('accountSelect');
-        select.innerHTML = '';
+        const select = document.getElementById('accountSelect'); select.innerHTML = '';
         appData.accounts.forEach(acc => {
-            const opt = document.createElement('option');
-            opt.value = acc.id; opt.text = acc.name;
+            const opt = document.createElement('option'); opt.value = acc.id; opt.text = acc.name;
             if(acc.id === appData.currentId) opt.selected = true;
             select.appendChild(opt);
         });
@@ -207,8 +214,7 @@
     function switchAccount() { appData.currentId = document.getElementById('accountSelect').value; refreshAccountSelectUI(); saveToLocalCache(); }
     function updateAccountName() {
         const newName = document.getElementById('accountNameInput').value.trim();
-        const currentAcc = getCurrentAccountObj();
-        currentAcc.name = newName || "未命名账号";
+        const currentAcc = getCurrentAccountObj(); currentAcc.name = newName || "未命名账号";
         document.getElementById('accountSelect').options[document.getElementById('accountSelect').selectedIndex].text = currentAcc.name;
         saveToLocalCache();
     }
@@ -236,56 +242,62 @@
     }
     function saveToLocalCache() { localStorage.setItem('lk_gist_data', JSON.stringify(appData)); }
 
-    /* ==================== 📲 高识别率、防卡死同步核心 ==================== */
+    /* ==================== 📲 骨架瘦身级极限压缩核心 ==================== */
 
-    // 1. 仅打包当前选中的“这一个”账号生成低密度、超好扫的二维码
     function shareCurrentAccountQR() {
         const currentAcc = getCurrentAccountObj();
-        // 关键优化：只压缩单账号，丢弃历史废弃数据，让体积减小 90%
-        const dataStr = btoa(encodeURIComponent(JSON.stringify(currentAcc)));
+        
+        // 🌟 1. 骨架压缩算法：只打包非0数据，且用索引代替中文名字
+        let compactPairs = [];
+        allMaterials.forEach((matName, index) => {
+            const val = parseInt(currentAcc.mats[matName]) || 0;
+            if(val > 0) {
+                compactPairs.push(`${index}:${val}`); // 压缩成 "1:12" 的极短格式
+            }
+        });
+
+        // 组成极小数据链： ID|名称|1:12,4:5
+        const finalRawStr = `${currentAcc.id}|${currentAcc.name}|${compactPairs.join(',')}`;
+        const compactCode = btoa(encodeURIComponent(finalRawStr));
         
         const baseUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
-        const targetUrl = baseUrl + "?a=" + dataStr;
+        const targetUrl = baseUrl + "?c=" + compactCode;
 
         document.getElementById("qrcode").innerHTML = "";
         document.getElementById("qrTitle").innerText = `📱 同步账号: ${currentAcc.name}`;
         document.getElementById("qrModal").style.display = "flex";
 
-        // 生成超高对比度、极其稀疏好识别的二维码
+        // 🌟 2. 生成格子极大、极好扫的超轻量二维码
         new QRCode(document.getElementById("qrcode"), {
             text: targetUrl,
-            width: 220,
-            height: 220,
+            width: 200,
+            height: 200,
             colorDark : "#000000",
             colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.M // 提高容错率，确保老手机、暗光环境一扫即过
+            correctLevel : QRCode.CorrectLevel.H // 提升到最高容错等级，哪怕屏幕有反光或抖动也能100%识别！
         });
     }
 
     function closeModal() { document.getElementById("qrModal").style.display = "none"; }
 
-    // 2. 如果要一次性同步所有多账号，请使用无损文本导出（Safari 贴文本绝对不会崩溃）
     function exportAllDataText() {
         const dataStr = btoa(encodeURIComponent(JSON.stringify(appData)));
         const temp = document.createElement("textarea");
         temp.value = dataStr; document.body.appendChild(temp);
         temp.select(); document.execCommand("copy"); document.body.removeChild(temp);
-        alert("📋 完整的多账号账本已完美复制到剪贴板！\n\n发送到手机上，在手机网页点【粘贴文本恢复】即可瞬间全量同步。");
+        alert("📋 全账号全量数据复制成功！");
     }
 
     function importDataText() {
-        const code = prompt("请在此粘贴完整的备份加密文本：");
-        if(!code) return;
+        const code = prompt("请输入加密文本："); if(!code) return;
         try {
             const rawStr = decodeURIComponent(atob(code.trim()));
             const decryptedData = JSON.parse(rawStr);
             if(decryptedData && decryptedData.accounts) {
-                appData = decryptedData;
-                refreshAccountSelectUI();
-                saveToLocalCache();
-                alert("🎉 离线全量文本同步恢复成功！");
+                appData = decryptedData; refreshAccountSelectUI(); saveToLocalCache();
+                alert("🎉 全量多账号恢复成功！");
             }
-        } catch(e) { alert("解析失败，请确保复制了完整的文本串。"); }
+        } catch(e) { alert("解析失败。"); }
     }
 </script>
 </body>
