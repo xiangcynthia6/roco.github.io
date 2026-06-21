@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>洛克王国咕噜球计算器 (终极文本精简版)</title>
+    <title>洛克王国咕噜球计算器 (十六进制二进制级压缩版)</title>
     <script src="https://cdn.staticfile.org/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { --primary-color: #4a90e2; --bg-color: #f5f7fa; --card-bg: #ffffff; --text-color: #333; }
@@ -43,11 +43,11 @@
 <body>
 
 <div class="container">
-    <h1>洛克王国咕噜球计算器 (双向高压缩版)</h1>
+    <h1>洛克王国咕噜球计算器 (十六进制比特流压缩版)</h1>
 
     <div class="sync-panel">
         <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; width: 100%;">
-            <button class="btn btn-success" onclick="shareCurrentAccountQR()">⚡ 电脑端：生成极稀疏二维码</button>
+            <button class="btn btn-success" onclick="shareCurrentAccountQR()">⚡ 电脑端：生成超稀疏二维码</button>
             <button class="btn" style="background-color: #34495e;" onclick="exportAllDataText()">📋 备份/复制全套超短文本</button>
             <button class="btn" style="background-color: #9b59b6;" onclick="importDataText()">📥 粘贴超短文本恢复</button>
         </div>
@@ -76,7 +76,7 @@
             </div>
             <div id="resultsContainer"></div>
             <div style="margin-top: 20px; text-align: right;">
-                <span id="statusLabel" class="status-msg">本地数据就绪</span>
+                <span id="statusLabel" class="status-msg">离线比特流引擎就绪</span>
             </div>
         </div>
     </div>
@@ -85,7 +85,7 @@
 <div class="modal" id="qrModal" onclick="closeModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
         <h3 id="qrTitle">📱 手机扫码同步</h3>
-        <p style="font-size: 12px; color: #555; margin-bottom: 5px;">通过骨架瘦身技术，iPhone 相机现已支持秒识别：</p>
+        <p style="font-size: 12px; color: #555; margin-bottom: 5px;">基于位流压缩，全满数据下二维码依然极大好扫：</p>
         <div id="qrcode"></div>
         <br>
         <button class="btn btn-danger" onclick="closeModal()">关闭窗口</button>
@@ -121,36 +121,43 @@
     appData.accounts[0].mats = createEmptyMats();
     appData.currentId = appData.accounts[0].id;
 
-    // 通用解压核心算法：将超短文本流还原为结构化账号数据
+    /* ==================== 🛠️ 核心：十六进制定长位流压缩算法 ==================== */
+
+    // 压缩：将单个账号压成固定 66 位的十六进制串
+    function packAccountObj(accObj) {
+        let hexStream = "";
+        allMaterials.forEach(matName => {
+            let val = parseInt(accObj.mats[matName]) || 0;
+            if (val > 255) val = 255; // 限制单项最大255，防止位流溢出
+            if (val < 0) val = 0;
+            // 转化为2位十六进制，不足的前面补0 (例如 12 -> '0c')
+            hexStream += val.toString(16).padStart(2, '0');
+        });
+        return `${accObj.id}|${accObj.name}|${hexStream}`;
+    }
+
+    // 解压：完美还原固定 66 位的十六进制串
     function unpackAccountStr(accountString) {
         const parts = accountString.split('|');
         if (parts.length >= 3) {
             const accId = parts[0];
             const accName = parts[1];
-            const matPairs = parts[2] ? parts[2].split(',') : [];
+            const hexStream = parts[2] || "";
             
             let restoredMats = createEmptyMats();
-            matPairs.forEach(pair => {
-                const kv = pair.split(':');
-                if(kv.length === 2) {
-                    const matName = allMaterials[parseInt(kv[0])];
-                    if(matName) restoredMats[matName] = parseInt(kv[1]) || 0;
+            // 每2位切开，对应一个物料
+            for (let i = 0; i < allMaterials.length; i++) {
+                const subHex = hexStream.substr(i * 2, 2);
+                if (subHex) {
+                    restoredMats[allMaterials[i]] = parseInt(subHex, 16) || 0;
                 }
-            });
+            }
             return { id: accId, name: accName, mats: restoredMats };
         }
         return null;
     }
 
-    // 通用压缩核心算法：将单个账号剔除0并数字化ID
-    function packAccountObj(accObj) {
-        let compactPairs = [];
-        allMaterials.forEach((matName, index) => {
-            const val = parseInt(accObj.mats[matName]) || 0;
-            if(val > 0) compactPairs.push(`${index}:${val}`);
-        });
-        return `${accObj.id}|${accObj.name}|${compactPairs.join(',')}`;
-    }
+    /* ===================================================================== */
 
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -170,9 +177,9 @@
                     appData.currentId = incomingAccount.id;
                     saveToLocalCache();
                     window.history.replaceState({}, document.title, window.location.pathname);
-                    alert(`🎉 扫码接收账号【${incomingAccount.name}】成功！`);
+                    alert(`🎉 双向位流同步：账号【${incomingAccount.name}】导入成功！`);
                 }
-            } catch(e) { alert("扫码数据解析失败。"); }
+            } catch(e) { alert("同步数据解析失败。"); }
         }
 
         renderMaterialsInput();
@@ -184,7 +191,7 @@
         allMaterials.forEach(mat => {
             const div = document.createElement('div');
             div.className = 'input-group';
-            div.innerHTML = `<label>${mat}</label><input type="number" min="0" id="mat-${mat}" value="0" oninput="onInputValueChange('${mat}')">`;
+            div.innerHTML = `<label>${mat}</label><input type="number" min="0" max="255" id="mat-${mat}" value="0" oninput="onInputValueChange('${mat}')">`;
             container.appendChild(div);
         });
     }
@@ -192,7 +199,9 @@
     function getCurrentAccountObj() { return appData.accounts.find(a => a.id === appData.currentId) || appData.accounts[0]; }
     function onInputValueChange(matName) {
         const currentAcc = getCurrentAccountObj();
-        currentAcc.mats[matName] = parseInt(document.getElementById(`mat-${matName}`).value) || 0;
+        let val = parseInt(document.getElementById(`mat-${matName}`).value) || 0;
+        if(val > 255) val = 255;
+        currentAcc.mats[matName] = val;
         calculateBalls(); saveToLocalCache();
     }
 
@@ -254,9 +263,7 @@
     }
     function saveToLocalCache() { localStorage.setItem('lk_gist_data', JSON.stringify(appData)); }
 
-    /* ==================== 📲 双向极轻量级文本压缩机制 ==================== */
-
-    // 1. 扫单账号二维码（保持极度稀疏）
+    // 1. 生成单账号位流二维码
     function shareCurrentAccountQR() {
         const currentAcc = getCurrentAccountObj();
         const compactCode = btoa(encodeURIComponent(packAccountObj(currentAcc)));
@@ -275,14 +282,13 @@
 
     function closeModal() { document.getElementById("qrModal").style.display = "none"; }
 
-    // 2. 导出所有账号：用 `#` 把多个瘦身后的账号数据连在一起，进行全本高阶压缩
+    // 2. 双向全量导出：无论满不满，体积永远被死死限制住
     function exportAllDataText() {
         let allPackedArray = [];
         appData.accounts.forEach(acc => {
             allPackedArray.push(packAccountObj(acc));
         });
         
-        // 最终格式： 账号1#账号2#账号3  然后再Base64一把
         const finalBookStr = allPackedArray.join('#');
         const ultraShortText = btoa(encodeURIComponent(finalBookStr));
 
@@ -290,12 +296,12 @@
         temp.value = ultraShortText; document.body.appendChild(temp);
         temp.select(); document.execCommand("copy"); document.body.removeChild(temp);
         
-        alert("📋 【全本极短密钥】已自动复制！\n\n数据已经被压榨到了极限，现在这段代码只有一两行，你可以极为清爽地发给手机了！");
+        alert("📋 【究极位流短码】已复制！\n\n通过底层十六进制重构，现在即使每一项都填满数字，生成的代码依然只有极短的一两行！");
     }
 
-    // 3. 导入所有账号：解析超短文本并完美恢复整个账本
+    // 3. 双向全量导入
     function importDataText() {
-        const code = prompt("请在此粘贴超短全本备份文本：");
+        const code = prompt("请粘贴新型十六进制全本备份文本：");
         if(!code || code.trim() === "") return;
         
         try {
@@ -318,12 +324,12 @@
                 appData.currentId = lastId;
                 refreshAccountSelectUI();
                 saveToLocalCache();
-                alert(`🎉 极短全本密钥解析成功！已完美恢复 ${importedAccounts.length} 个账号的数据！`);
+                alert(`🎉 究极位流同步恢复成功！已导入 ${importedAccounts.length} 个账号！`);
             } else {
-                alert("未能从文本中解析出有效的账号，请确保文本完整。");
+                alert("文本解析失败，请确保文本完整。");
             }
         } catch(e) {
-            alert("解析失败！该文本不符合新型极限压缩规则，如果是老版本的长文本，请清空后重新从新版电脑端导出。");
+            alert("解析失败！为了配合最新的十六进制算法，请在两端都刷新并使用这套新系统进行双向同步。");
         }
     }
 </script>
